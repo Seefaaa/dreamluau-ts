@@ -1,0 +1,17 @@
+{
+    "name": "scripts",
+    "module": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "build": "tstl",
+        "dev": "tstl --watch"
+    },
+    "devDependencies": {
+        "typescript-to-lua": "^1.37.1",
+        "byond-types": "workspace:*"
+    },
+    "peerDependencies": {
+        "typescript": "^6"
+    }
+}

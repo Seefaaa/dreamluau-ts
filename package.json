@@ -1,0 +1,14 @@
+{
+    "name": "dreamluau-ts",
+    "private": true,
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "bun run --filter scripts build",
+        "dev": "bun run --filter scripts dev"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.5.5"
+    }
+}
