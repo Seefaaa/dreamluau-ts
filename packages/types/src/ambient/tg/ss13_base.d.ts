@@ -1,5 +1,10 @@
 /** @noSelfInFile */
 
+/// <reference path="../../index.d.ts" />
+/// <reference path="./state.d.ts" />
+/// <reference path="./signals.d.ts" />
+/// <reference path="./typepaths.d.ts" />
+
 /**
  * @noResolution
  */
@@ -58,48 +63,4 @@ declare module "SS13_base" {
         signal: string,
         callback: F
     ): void;
-}
-
-/** @noSelf */
-interface SignalRegistry<S extends Byond.Datum = Byond.Datum> {
-    mob_ability_base_started: (
-        source: S,
-        actionTarget: Byond.Datum.Action.Cooldown,
-        target: Byond.Atom
-    ) => Bitflag<[ComponentBlockAbilityStart]>;
-    mob_ctrl_clicked: (source: S, target: Byond.Atom) => Bitflag<[]>;
-}
-
-type Bitflag<Flags extends number[]> = Flags extends [infer First extends number, ...infer Rest extends number[]]
-    ? First | Bitflag<Rest>
-    : 0;
-
-type ComponentBlockAbilityStart = 1;
-
-interface TypePathRegistry {
-    "/area": Byond.Area;
-
-    "/atom": Byond.Atom;
-    "/atom/movable": Byond.Atom.Movable;
-
-    "/datum": Byond.Datum;
-    "/datum/action/cooldown": Byond.Datum.Action.Cooldown;
-    "/datum/antagonist/custom": Byond.Datum.Antagonist.Custom;
-    "/datum/http_request": Byond.Datum.HttpRequest;
-    "/datum/objective": Byond.Datum.Objective;
-
-    "/icon": Byond.Icon;
-
-    "/mob": Byond.Mob;
-    "/mob/eye": Byond.Mob.Eye;
-    "/mob/living/carbon/human": Byond.Mob.Living.Carbon.Human;
-
-    "/obj": Byond.Obj;
-    "/obj/item/organ/internal/zombie_infection": Byond.Obj.Item.Organ;
-
-    "/sound": Byond.Sound;
-
-    "/turf": Byond.Turf;
-
-    "/world": Byond.World;
 }

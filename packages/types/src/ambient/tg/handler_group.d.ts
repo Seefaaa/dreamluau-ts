@@ -1,5 +1,7 @@
 /** @noSelfInFile */
 
+/// <reference path="../../index.d.ts" />
+
 /**
  * @noResolution
  */
