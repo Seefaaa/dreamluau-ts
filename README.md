@@ -45,7 +45,7 @@ The `packages/types` package (`byond-types`) provides ambient type declarations 
 
 Those types are automatically included in your TypeScript project when you add the following to your `tsconfig.json`:
 
-```json
+```jsonc
 {
   "compilerOptions": {
     "types": ["byond-types/tg"] // for /tg/station codebase
