@@ -16,37 +16,22 @@ declare module "SS13_base" {
 
     export function type(type: string): Byond.Type;
 
-    export function istype<T extends keyof TypePathRegistry>(
-        thing: any,
-        type: T,
-    ): thing is TypePathRegistry[T];
+    export function istype<T extends keyof TypePathRegistry>(thing: any, type: T): thing is TypePathRegistry[T];
     export function istype(thing: any, type: string): Byond.Bool;
 
-    export function typecacheof(
-        types: string[],
-    ): Byond.List<number, Byond.Type>;
+    export function typecacheof(types: string[]): Byond.List<number, Byond.Type>;
 
-    export function is_type_in_typecache(
-        type: Byond.Type,
-        typecache: Byond.List<number, Byond.Type>,
-    ): Byond.Bool;
+    export function is_type_in_typecache(type: Byond.Type, typecache: Byond.List<number, Byond.Type>): Byond.Bool;
 
-    export function typesof(
-        type: string,
-        subtypes_only?: Byond.Bool,
-    ): Byond.List<number, Byond.Type>;
+    export function typesof(type: string, subtypes_only?: Byond.Bool): Byond.List<number, Byond.Type>;
 
     export function get_turf(thing: Byond.Atom): Byond.Turf;
 
     export function get_area(thing: Byond.Atom): Byond.Area;
 
-    function __new<T extends keyof TypePathRegistry>(
-        type: T,
-        ...args: any[]
-    ): TypePathRegistry[T];
+    function __new<T extends keyof TypePathRegistry>(type: T, ...args: any[]): TypePathRegistry[T];
     function __new<T>(type: string, ...args: any[]): T;
 
-    // biome-ignore lint/style/useExportType: need for real
     export { __new as new };
 
     export function qdel(datum: Byond.Datum): Byond.Bool;
@@ -61,10 +46,11 @@ declare module "SS13_base" {
         ...args: any[]
     ): LuaMultiReturn<[R, string]>;
 
-    export function register_signal<
-        D extends Byond.Datum,
-        S extends keyof SignalRegistry<D>,
-    >(datum: D, signal: S, callback: SignalRegistry<D>[S]): Byond.Bool;
+    export function register_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
+        datum: D,
+        signal: S,
+        callback: SignalRegistry<D>[S]
+    ): Byond.Bool;
 
     // export function register_signal(
     //     datum: Byond.Datum,
@@ -75,7 +61,7 @@ declare module "SS13_base" {
     export function unregister_signal<F extends (...args: any[]) => any>(
         datum: Byond.Datum,
         signal: string,
-        callback: F,
+        callback: F
     ): void;
 }
 
@@ -84,15 +70,12 @@ interface SignalRegistry<S extends Byond.Datum = Byond.Datum> {
     mob_ability_base_started: (
         source: S,
         actionTarget: Byond.Datum.Action.Cooldown,
-        target: Byond.Atom,
+        target: Byond.Atom
     ) => Bitflag<[ComponentBlockAbilityStart]>;
     mob_ctrl_clicked: (source: S, target: Byond.Atom) => Bitflag<[]>;
 }
 
-type Bitflag<Flags extends number[]> = Flags extends [
-    infer First extends number,
-    ...infer Rest extends number[],
-]
+type Bitflag<Flags extends number[]> = Flags extends [infer First extends number, ...infer Rest extends number[]]
     ? First | Bitflag<Rest>
     : 0;
 

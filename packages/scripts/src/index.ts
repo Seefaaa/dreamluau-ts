@@ -16,10 +16,10 @@ const isSpawning = false;
 SS13.state.supress_runtimes = true;
 
 function tickLag(_tickUsageStart: number, worldTime: number): boolean {
-if (dm.world.time !== worldTime) {
-    print("We slept somewhere!");
-    return true;
-}
+    if (dm.world.time !== worldTime) {
+        print("We slept somewhere!");
+        return true;
+    }
     return _exec.time / (dm.world.tick_lag * 100) > 0.85;
 }
 
@@ -105,18 +105,12 @@ function getPlane(newPlane: number, zReference: Byond.Atom): number {
     if (SSmapping.max_plane_offset !== 0) {
         let turfPlaneOffsets = 0;
 
-        if (
-            SSmapping.max_plane_offset !== undefined &&
-            SS13.istype(zReference, "/atom")
-        ) {
+        if (SSmapping.max_plane_offset !== undefined && SS13.istype(zReference, "/atom")) {
             if (zReference.z !== undefined) {
-                turfPlaneOffsets =
-                    SSmapping.z_level_to_plane_offset[zReference.z] ?? 0;
+                turfPlaneOffsets = SSmapping.z_level_to_plane_offset[zReference.z] ?? 0;
             } else {
                 if (SSmapping.plane_to_offset !== undefined) {
-                    turfPlaneOffsets =
-                        SSmapping.plane_to_offset[tostring(zReference.plane)] ??
-                        0;
+                    turfPlaneOffsets = SSmapping.plane_to_offset[tostring(zReference.plane)] ?? 0;
                 } else {
                     turfPlaneOffsets = zReference.plane;
                 }
@@ -125,10 +119,7 @@ function getPlane(newPlane: number, zReference: Byond.Atom): number {
 
         const planeOffsetBlacklist = SSmapping.plane_offset_blacklist;
 
-        if (
-            planeOffsetBlacklist === undefined ||
-            planeOffsetBlacklist[tostring(newPlane)]
-        ) {
+        if (planeOffsetBlacklist === undefined || planeOffsetBlacklist[tostring(newPlane)]) {
             return newPlane;
         } else {
             return newPlane - 100 * turfPlaneOffsets;
@@ -207,17 +198,11 @@ function locate(x: number, y: number, z: number): Byond.Turf {
     return dm.global_procs._locate(x, y, z);
 }
 
-function rangeTurfs(
-    location: Byond.Atom,
-    radius: number,
-): Byond.List<number, Byond.Turf> {
+function rangeTurfs(location: Byond.Atom, radius: number): Byond.List<number, Byond.Turf> {
     const x = location.x;
     const y = location.y;
     const z = location.z;
-    return dm.global_procs._block(
-        locate(x - radius, y - radius, z),
-        locate(x + radius, y + radius, z),
-    );
+    return dm.global_procs._block(locate(x - radius, y - radius, z), locate(x + radius, y + radius, z));
 }
 
 function to_chat(user: Byond.Datum, message: string) {
@@ -239,11 +224,7 @@ type HumanData = {
     };
 };
 
-function RegisterClassSignal(
-    humanData: HumanData,
-    signal: keyof SignalRegistry,
-    callback: (...args: any[]) => any,
-) {
+function RegisterClassSignal(humanData: HumanData, signal: keyof SignalRegistry, callback: (...args: any[]) => any) {
     SS13.register_signal(humanData.human, signal, callback);
     humanData.classCleanup.push({
         target: humanData.human,
@@ -255,7 +236,7 @@ function RegisterClassSignal2(
     humanData: HumanData,
     target: Byond.Datum,
     signal: keyof SignalRegistry,
-    callback: (...args: any[]) => any,
+    callback: (...args: any[]) => any
 ) {
     SS13.register_signal(target, signal, callback);
     humanData.classCleanup.push({
@@ -276,7 +257,7 @@ type AbilityData = {
         this: void,
         humanData: HumanData,
         action: Byond.Datum.Action.Cooldown,
-        target: Byond.Datum,
+        target: Byond.Datum
     ) => Bitflag<[ComponentBlockAbilityStart]>;
 };
 
@@ -289,7 +270,7 @@ function grantAbility(humanData: HumanData, abilityData: AbilityData) {
         action.click_to_activate = 1;
         action.unset_after_click = 1;
         action.ranged_mousepointer = icon(
-            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi",
+            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
         );
     }
 
@@ -300,25 +281,17 @@ function grantAbility(humanData: HumanData, abilityData: AbilityData) {
     action.active_overlay_icon_state = "bg_nature_border";
     action.cooldown_time = (abilityData.cooldown ?? 0) * 10;
 
-    SS13.register_signal(
-        humanData.human,
-        "mob_ability_base_started",
-        (source, actionTarget, target) => {
-            if (ref(actionTarget) === ref(action)) {
-                const returnValue = abilityData.onActivate(
-                    humanData,
-                    action,
-                    target,
-                );
-                if (action.unset_after_click === 1) {
-                    action.unset_click_ability(source, 0);
-                }
-                source.next_click = dm.world.time + action.click_cd_override;
-                return returnValue;
+    SS13.register_signal(humanData.human, "mob_ability_base_started", (source, actionTarget, target) => {
+        if (ref(actionTarget) === ref(action)) {
+            const returnValue = abilityData.onActivate(humanData, action, target);
+            if (action.unset_after_click === 1) {
+                action.unset_click_ability(source, 0);
             }
-            return 0
-        },
-    );
+            source.next_click = dm.world.time + action.click_cd_override;
+            return returnValue;
+        }
+        return 0;
+    });
 
     action.name = abilityData.name;
 
@@ -331,116 +304,116 @@ function grantAbility(humanData: HumanData, abilityData: AbilityData) {
     return action;
 }
 
-const zombieControllerTargets: Record<string, Byond.Atom> = {}
-const zombieControllers: Byond.Mob[] = []
+const zombieControllerTargets: Record<string, Byond.Atom> = {};
+const zombieControllers: Byond.Mob[] = [];
 
 function sayText(player: Byond.Mob, chatName: string, message: string, big: boolean) {
-    message = dm.global_procs._copytext(dm.global_procs.trim(message), 1, 1024)
-    player.log_talk(message, 2)
-    const renderedText = player.generate_messagepart(message)
-    let rendered = `<span class='nicegreen'><b>[Controller Talk] ${chatName}</b> ${renderedText}</span>`
+    message = dm.global_procs._copytext(dm.global_procs.trim(message), 1, 1024);
+    player.log_talk(message, 2);
+    const renderedText = player.generate_messagepart(message);
+    let rendered = `<span class='nicegreen'><b>[Controller Talk] ${chatName}</b> ${renderedText}</span>`;
     if (big) {
-        rendered = `<span class='big'>${rendered}</span>`
+        rendered = `<span class='big'>${rendered}</span>`;
         for (const player of zombieControllers) {
             // biome-ignore lint/style/noNonNullAssertion: just this once
-            player.playsound_local(player.loc!, "sound/effects/glockenspiel_ping.ogg", 100)
+            player.playsound_local(player.loc!, "sound/effects/glockenspiel_ping.ogg", 100);
         }
     }
-    dm.global_procs.relay_to_list_and_observers(rendered, zombieControllers, player)
+    dm.global_procs.relay_to_list_and_observers(rendered, zombieControllers, player);
 }
 
-const deadPlayersByZLevel = dm.global_vars.SSmobs.dead_players_by_zlevel
-const SSspatial_grid = dm.global_vars.SSspatial_grid
+const deadPlayersByZLevel = dm.global_vars.SSmobs.dead_players_by_zlevel;
+const SSspatial_grid = dm.global_vars.SSspatial_grid;
 
 function makeZombieController(location: Byond.Turf) {
-    const controller = SS13.new("/mob/eye", location)
-    const controllerData = { mob: controller }
-    controller.real_name = `Zombie Controller (${math.random(101, 999)})`
-    controller.name = controller.real_name
-    controller.invisibility = 35
-    controller.see_invisible = 35
-    controller.layer = 5
-    controller.plane = getPlane(-3, location)
-    controller.faction = list.from_table(["zombie"])
-    controller.set_sight(60)
-    controller.mouse_opacity = 1
-    controller.color = "#33cc33"
-    controller.icon = icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/eyemob.dmi")
-    controller.icon_state = "marker"
+    const controller = SS13.new("/mob/eye", location);
+    const controllerData = { mob: controller };
+    controller.real_name = `Zombie Controller (${math.random(101, 999)})`;
+    controller.name = controller.real_name;
+    controller.invisibility = 35;
+    controller.see_invisible = 35;
+    controller.layer = 5;
+    controller.plane = getPlane(-3, location);
+    controller.faction = list.from_table(["zombie"]);
+    controller.set_sight(60);
+    controller.mouse_opacity = 1;
+    controller.color = "#33cc33";
+    controller.icon = icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/eyemob.dmi");
+    controller.icon_state = "marker";
     // controller.lightning_cutoff_red = 5
     // controller.lightning_cutoff_green = 35
     // controller.lightning_cutoff_blue = 20
-    controller.mind_initialize()
+    controller.mind_initialize();
 
     const mind = assert(controller.mind);
 
-    const antag = SS13.new("/datum/antagonist/custom")
-    antag.name = "Controller"
-    antag.show_to_ghosts = 1
-    antag.antagpanel_category = "Special Infected"
-    antag.ui_name = undefined
+    const antag = SS13.new("/datum/antagonist/custom");
+    antag.name = "Controller";
+    antag.show_to_ghosts = 1;
+    antag.antagpanel_category = "Special Infected";
+    antag.ui_name = undefined;
 
     const objective = SS13.new("/datum/objective");
-    objective.owner = mind
-    objective.explanation_text = "Control the zombie hordes into the humans."
-    objective.completed = 1
-    list.add(antag.objectives, objective)
+    objective.owner = mind;
+    objective.explanation_text = "Control the zombie hordes into the humans.";
+    objective.completed = 1;
+    list.add(antag.objectives, objective);
 
-    mind.add_antag_datum(antag)
+    mind.add_antag_datum(antag);
 
-    dm.global_procs._add_trait(controller, "mute", "zs_controller")
+    dm.global_procs._add_trait(controller, "mute", "zs_controller");
 
-    zombieControllers.push(controller)
+    zombieControllers.push(controller);
 
-    const nextRally = 0
+    const nextRally = 0;
     let rallyTimer: string | undefined;
-    const controllerRef = ref(controller)
+    const controllerRef = ref(controller);
 
     SS13.register_signal(controller, "mob_ctrl_clicked", (_, target) => {
         if (rallyTimer) {
-            SS13.end_loop(rallyTimer)
+            SS13.end_loop(rallyTimer);
         }
 
-        zombieControllerTargets[controllerRef] = target
+        zombieControllerTargets[controllerRef] = target;
 
         if (!SS13.istype(target, "/turf")) {
-            to_chat(controller, `<span class='notice'>You rally nearby zombies to attack ${tostring(target)}</span>`)
+            to_chat(controller, `<span class='notice'>You rally nearby zombies to attack ${tostring(target)}</span>`);
             rallyTimer = SS13.start_loop(30, 1, () => {
-                delete zombieControllerTargets[controllerRef]
+                delete zombieControllerTargets[controllerRef];
             });
         } else {
-            to_chat(controller, "<span class='notice'>You rally nearby zombies to the targeted location</span>")
+            to_chat(controller, "<span class='notice'>You rally nearby zombies to the targeted location</span>");
             rallyTimer = SS13.start_loop(10, 1, () => {
-                delete zombieControllerTargets[controllerRef]
+                delete zombieControllerTargets[controllerRef];
             });
         }
 
-        const potentialTargets = dm.global_procs.get_hearers_in_range(10, controller)
+        const potentialTargets = dm.global_procs.get_hearers_in_range(10, controller);
 
         for (const zombie of potentialTargets) {
             if (!isZombie(zombie)) {
-                continue
+                continue;
             }
 
-            const mutationData = getZombieMutation(zombie)
+            const mutationData = getZombieMutation(zombie);
 
             if (mutationData?.class !== "Zombie (AI)") {
-                continue
+                continue;
             }
 
             if (mutationData.zombieAi !== undefined) {
                 mutationData.zombieAi.nextTargetSearch = 0;
-                mutationData.zombieAi.lastTarget = dm.world.time
-                mutationData.zombieAi.makeActive()
+                mutationData.zombieAi.lastTarget = dm.world.time;
+                mutationData.zombieAi.makeActive();
             }
         }
 
-        return 0
-    })
+        return 0;
+    });
 
-    const oldZ = controller.z
+    const oldZ = controller.z;
 
     if (oldZ !== undefined && deadPlayersByZLevel[oldZ] !== undefined) {
-        list.add(deadPlayersByZLevel[oldZ], controller)
+        list.add(deadPlayersByZLevel[oldZ], controller);
     }
 }

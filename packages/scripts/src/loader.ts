@@ -31,7 +31,7 @@ export function sound(http: string): Byond.Sound {
         return soundsByHttp[http];
     }
 
-    const request = SS13.new<Byond.Datum.HttpRequest>("/datum/http_request");
+    const request = SS13.new("/datum/http_request");
     const fileName = "tmp/custom_map_sound.ogg";
     request.prepare("get", http, "", "", fileName);
     request.begin_async();

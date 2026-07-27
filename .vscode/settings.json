@@ -2,7 +2,7 @@
   "files.readonlyInclude": {
     "**/node_modules/**": true,
     "**/dist/**": true,
-    "bun.lock": true,
+    "bun.lock": true
   },
   // Ensures that all files end with a newline and removes trailing whitespace on save.
   "files.insertFinalNewline": true,

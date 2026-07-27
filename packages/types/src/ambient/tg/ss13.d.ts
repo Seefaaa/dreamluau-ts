@@ -35,10 +35,7 @@ declare namespace SS13 {
     }
 
     class SSmobs extends Subsystem {
-        dead_players_by_zlevel: Byond.List<
-            number,
-            Byond.List<number, Byond.Mob>
-        >;
+        dead_players_by_zlevel: Byond.List<number, Byond.List<number, Byond.Mob>>;
     }
 
     class SSspatial_grid extends Subsystem {}
@@ -59,7 +56,7 @@ declare namespace Byond {
                 url: string,
                 body: string,
                 headers: string,
-                output: string,
+                output: string
             ): void;
 
             begin_async(): void;
@@ -91,12 +88,7 @@ declare namespace Byond {
              */
             target: Byond.Datum | undefined;
             /** Where any buttons we create should be by default. Accepts screen_loc and location defines */
-            default_button_position:
-                | "default"
-                | "floating"
-                | "list"
-                | "palette"
-                | "first";
+            default_button_position: "default" | "floating" | "list" | "palette" | "first";
             /**
              * This is who currently owns the action, and most often, this is who is using the action if it is triggered
              *
@@ -166,10 +158,7 @@ declare namespace Byond {
                 /** List of prerequisite actions that are used in this sequenced ability, you cannot put other sequenced abilities in this */
                 sequence_actions: Byond.List<Byond.Type, number>;
                 /** List of prerequisite actions that have been initialized */
-                initialized_actions: Byond.List<
-                    Byond.Datum.Action.Cooldown,
-                    number
-                >;
+                initialized_actions: Byond.List<Byond.Datum.Action.Cooldown, number>;
 
                 /** Setting for intercepting clicks before activating the ability */
                 click_to_activate: Byond.Bool;
@@ -201,7 +190,7 @@ declare namespace Byond {
                 unset_click_ability(
                     this: Byond.Datum.Action.Cooldown,
                     on_who: Byond.Mob,
-                    refund_cooldown?: Byond.Bool,
+                    refund_cooldown?: Byond.Bool
                 ): void;
             }
         }
@@ -253,10 +242,8 @@ declare namespace Byond {
         class Mind extends Byond.Datum {
             add_antag_datum(
                 this: Byond.Datum.Mind,
-                antag:
-                    | Byond.Type<Byond.Datum.Antagonist>
-                    | Byond.Datum.Antagonist,
-                team?: Byond.Datum.Team,
+                antag: Byond.Type<Byond.Datum.Antagonist> | Byond.Datum.Antagonist,
+                team?: Byond.Datum.Team
             ): void;
         }
 
@@ -276,10 +263,7 @@ declare namespace Byond {
 
         mind: Byond.Datum.Mind | undefined;
 
-        get_organ_slot(
-            this: Byond.Mob,
-            slot: string,
-        ): Byond.Obj.Item.Organ | undefined;
+        get_organ_slot(this: Byond.Mob, slot: string): Byond.Obj.Item.Organ | undefined;
 
         /**
          * Plays a sound with a specific point of origin for src mob
@@ -318,28 +302,21 @@ declare namespace Byond {
             falloff_distance?: number,
             use_reverb?: Byond.Bool,
             volume_preference?: Byond.Datum.Preference.Numeric.Volume,
-            min_volume?: number,
+            min_volume?: number
         ): void;
 
         /**
          * Sight here is the mob.sight var, which tells byond what to actually show to our client
          * See [code\__DEFINES\sight.dm] for more details
          */
-        set_sight(
-            this: Byond.Mob,
-            sight: Bitflag<[SeeInvisibleObserver]>,
-        ): void;
+        set_sight(this: Byond.Mob, sight: Bitflag<[SeeInvisibleObserver]>): void;
 
         mind_initialize(this: Byond.Mob): void;
     }
 
     namespace Mob {
         class Living extends Byond.Mob {
-            getarmor(
-                this: Byond.Mob.Living,
-                defType: string,
-                type: string,
-            ): number;
+            getarmor(this: Byond.Mob.Living, defType: string, type: string): number;
         }
 
         namespace Living {
@@ -376,7 +353,7 @@ declare namespace Byond {
             tag?: string,
             log_globally?: Byond.Bool,
             forced_by?: Byond.Datum,
-            custom_say_emote?: string,
+            custom_say_emote?: string
         ): void;
     }
 
@@ -400,7 +377,7 @@ declare namespace Byond {
                 this: Byond.Atom.Movable,
                 input: string,
                 spans?: Byond.List<number, string>,
-                message_mods?: List<number, string>,
+                message_mods?: List<number, string>
             ): string;
         }
     }
@@ -414,7 +391,7 @@ declare namespace Byond {
                     this: Byond.Obj.Item.Organ,
                     target: Byond.Mob.Living.Carbon,
                     special?: Byond.Bool,
-                    movementFlags?: number,
+                    movementFlags?: number
                 ): void;
             }
         }
@@ -435,10 +412,7 @@ declare interface GlobalProcs {
     _has_trait(target: Byond.Datum, trait: string): Byond.Bool;
     _prob(chance: number): Byond.Bool;
     _locate(x: number, y: number, z: number): Byond.Turf;
-    _block(
-        point1: Byond.Turf,
-        point2: Byond.Turf,
-    ): Byond.List<number, Byond.Turf>;
+    _block(point1: Byond.Turf, point2: Byond.Turf): Byond.List<number, Byond.Turf>;
     to_chat(user: Byond.Datum, message: string): void;
     trim(string: string): string;
     _copytext(text: string, from: number, to: number): string;
@@ -446,7 +420,7 @@ declare interface GlobalProcs {
         message: string,
         mob_list: Byond.List<number, Byond.Mob> | Byond.Mob[],
         source: Byond.Atom,
-        message_type?: number,
+        message_type?: number
     ): void;
     _add_trait(target: Byond.Datum, trait: string, source: string): void;
 
@@ -467,7 +441,7 @@ declare interface GlobalProcs {
             | "recursive_contents_area_sensitive"
             | "recursive_contents_hearing_sensitive"
             | "recursive_contents_client_mobs"
-            | "recursive_contents_active_storage",
+            | "recursive_contents_active_storage"
     ): Byond.List<number, Byond.Atom.Movable>;
 }
 

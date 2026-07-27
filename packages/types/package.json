@@ -1,32 +1,32 @@
 {
-    "name": "byond-types",
-    "version": "0.1.0",
-    "files": [
-        "src"
-    ],
-    "exports": {
-        ".": {
-            "types": "./src/index.d.ts"
-        },
-        "./tg": {
-            "types": "./src/ambient/tg/index.d.ts"
-        }
+  "name": "byond-types",
+  "version": "0.1.0",
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts"
     },
-    "typesVersions": {
-        "*": {
-            ".": [
-                "./src/index.d.ts"
-            ],
-            "tg": [
-                "./src/ambient/tg/index.d.ts"
-            ]
-        }
-    },
-    "dependencies": {
-        "@typescript-to-lua/language-extensions": "^1.19.0",
-        "lua-types": "^2.14.1"
-    },
-    "peerDependencies": {
-        "typescript": "^6"
+    "./tg": {
+      "types": "./src/ambient/tg/index.d.ts"
     }
+  },
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./src/index.d.ts"
+      ],
+      "tg": [
+        "./src/ambient/tg/index.d.ts"
+      ]
+    }
+  },
+  "dependencies": {
+    "@typescript-to-lua/language-extensions": "^1.19.0",
+    "lua-types": "^2.14.1"
+  },
+  "peerDependencies": {
+    "typescript": "^6"
+  }
 }
