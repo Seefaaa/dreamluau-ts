@@ -4,7 +4,7 @@
  * @noResolution
  */
 declare module "SS13_base" {
-    export const SSlua: Byond.Datum;
+    export const SSlua: SS13.SSlua;
     export const global_proc: "some_magic_bullshit";
     export const state: typeof import("state").state;
 
@@ -30,7 +30,8 @@ declare module "SS13_base" {
     export function get_area(thing: Byond.Atom): Byond.Area;
 
     function __new<T extends keyof TypePathRegistry>(type: T, ...args: any[]): TypePathRegistry[T];
-    function __new<T>(type: string, ...args: any[]): T;
+    // function __new<T>(type: string, ...args: any[]): T;
+    function __new(type: string, ...args: any[]): unknown;
 
     export { __new as new };
 
@@ -51,12 +52,6 @@ declare module "SS13_base" {
         signal: S,
         callback: SignalRegistry<D>[S]
     ): Byond.Bool;
-
-    // export function register_signal(
-    //     datum: Byond.Datum,
-    //     signal: string,
-    //     callback: (...args: any[]) => number,
-    // ): Byond.Bool;
 
     export function unregister_signal<F extends (...args: any[]) => any>(
         datum: Byond.Datum,
@@ -82,19 +77,29 @@ type Bitflag<Flags extends number[]> = Flags extends [infer First extends number
 type ComponentBlockAbilityStart = 1;
 
 interface TypePathRegistry {
+    "/area": Byond.Area;
+
+    "/atom": Byond.Atom;
+    "/atom/movable": Byond.Atom.Movable;
+
     "/datum": Byond.Datum;
     "/datum/action/cooldown": Byond.Datum.Action.Cooldown;
     "/datum/antagonist/custom": Byond.Datum.Antagonist.Custom;
-    "/datum/objective": Byond.Datum.Objective;
     "/datum/http_request": Byond.Datum.HttpRequest;
-    "/atom": Byond.Atom;
-    "/atom/movable": Byond.Atom.Movable;
-    "/obj": Byond.Obj;
+    "/datum/objective": Byond.Datum.Objective;
+
+    "/icon": Byond.Icon;
+
     "/mob": Byond.Mob;
     "/mob/eye": Byond.Mob.Eye;
     "/mob/living/carbon/human": Byond.Mob.Living.Carbon.Human;
-    "/turf": Byond.Turf;
-    "/area": Byond.Area;
-    "/world": Byond.World;
+
+    "/obj": Byond.Obj;
     "/obj/item/organ/internal/zombie_infection": Byond.Obj.Item.Organ;
+
+    "/sound": Byond.Sound;
+
+    "/turf": Byond.Turf;
+
+    "/world": Byond.World;
 }

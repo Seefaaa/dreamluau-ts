@@ -1,21 +1,25 @@
 import * as SS13 from "SS13";
 
 declare var iconsByHttp: Record<string, Byond.Icon>;
-iconsByHttp = iconsByHttp ?? {};
+iconsByHttp ??= {};
 
 export function icon(http: string): Byond.Icon {
     if (iconsByHttp[http]) {
-        return iconsByHttp[http] as Byond.Icon;
+        return iconsByHttp[http];
     }
 
-    const request = SS13.new<Byond.Datum.HttpRequest>("/datum/http_request");
+    const request = SS13.new("/datum/http_request");
     const fileName = "tmp/custom_map_icon.dmi";
+
     request.prepare("get", http, "", "", fileName);
     request.begin_async();
+
     while (request.is_complete() === 0) {
         sleep();
     }
-    iconsByHttp[http] = SS13.new<Byond.Icon>("/icon", fileName);
+
+    iconsByHttp[http] = SS13.new("/icon", fileName);
+
     return iconsByHttp[http];
 }
 
@@ -24,7 +28,7 @@ export function icons<T extends string[]>(http: [...T]): { [K in keyof T]: Byond
 }
 
 declare var soundsByHttp: Record<string, Byond.Sound>;
-soundsByHttp = soundsByHttp ?? {};
+soundsByHttp ??= {};
 
 export function sound(http: string): Byond.Sound {
     if (soundsByHttp[http]) {
@@ -33,12 +37,16 @@ export function sound(http: string): Byond.Sound {
 
     const request = SS13.new("/datum/http_request");
     const fileName = "tmp/custom_map_sound.ogg";
+
     request.prepare("get", http, "", "", fileName);
     request.begin_async();
+
     while (request.is_complete() === 0) {
         sleep();
     }
-    soundsByHttp[http] = SS13.new<Byond.Sound>("/sound", fileName);
+
+    soundsByHttp[http] = SS13.new("/sound", fileName);
+
     return soundsByHttp[http];
 }
 
