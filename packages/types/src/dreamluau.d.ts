@@ -1,3 +1,5 @@
+/** @noSelfInFile */
+
 /**
  * Yields the active thread, without worrying about passing data into or out of the state.
  *

@@ -17,16 +17,16 @@ declare module "SS13_base" {
 
     export function get_runner_client(): Byond.Datum;
 
-    export function ispath(thing: Byond.Type, path: Byond.Type): Byond.Bool;
+    export function ispath(thing: Byond.Type, path: Byond.Type): boolean;
 
     export function type(type: string): Byond.Type;
 
     export function istype<T extends keyof TypePathRegistry>(thing: any, type: T): thing is TypePathRegistry[T];
-    export function istype(thing: any, type: string): Byond.Bool;
+    export function istype(thing: any, type: string): boolean;
 
     export function typecacheof(types: string[]): Byond.List<number, Byond.Type>;
 
-    export function is_type_in_typecache(type: Byond.Type, typecache: Byond.List<number, Byond.Type>): Byond.Bool;
+    export function is_type_in_typecache(type: Byond.Type, typecache: Byond.List<number, Byond.Type>): boolean;
 
     export function typesof(type: string, subtypes_only?: Byond.Bool): Byond.List<number, Byond.Type>;
 
@@ -40,9 +40,9 @@ declare module "SS13_base" {
 
     export { __new as new };
 
-    export function qdel(datum: Byond.Datum): Byond.Bool;
+    export function qdel(datum: Byond.Datum): boolean;
 
-    export function is_valid(datum: Byond.Datum | undefined): Byond.Bool;
+    export function is_valid(datum: Byond.Datum | undefined): boolean;
 
     export function check_tick(high_priority?: Byond.Bool): void;
 
@@ -56,7 +56,7 @@ declare module "SS13_base" {
         datum: D,
         signal: S,
         callback: SignalRegistry<D>[S]
-    ): Byond.Bool;
+    ): boolean;
 
     export function unregister_signal<F extends (...args: any[]) => any>(
         datum: Byond.Datum,

@@ -24,7 +24,11 @@ export function icon(http: string): Byond.Icon {
 }
 
 export function icons<T extends string[]>(http: [...T]): { [K in keyof T]: Byond.Icon } {
-    return http.map((url) => icon(url)) as { [K in keyof T]: Byond.Icon };
+    const icons = {} as { [K in keyof T]: Byond.Icon };
+    for (const url of http) {
+        table.insert(icons, icon(url));
+    }
+    return icons;
 }
 
 declare var soundsByHttp: Record<string, Byond.Sound>;
@@ -51,5 +55,9 @@ export function sound(http: string): Byond.Sound {
 }
 
 export function sounds<T extends string[]>(http: [...T]): { [K in keyof T]: Byond.Sound } {
-    return http.map((url) => sound(url)) as { [K in keyof T]: Byond.Sound };
+    const sounds = {} as { [K in keyof T]: Byond.Sound };
+    for (const url of http) {
+        table.insert(sounds, sound(url));
+    }
+    return sounds;
 }

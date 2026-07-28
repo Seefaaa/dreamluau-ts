@@ -7,7 +7,7 @@ import * as SS13 from "SS13";
 import { icon, sounds } from "./loader";
 
 const isLocal = false;
-const admin = "hatods";
+const admin = "sefaaa";
 const localClass = "Zombie (AI)";
 const allowZombieControllable = false;
 const allowTankSpawn = false;
@@ -24,11 +24,9 @@ function tickLag(_tickUsageStart: number, worldTime: number): boolean {
 }
 
 if (!isLocal) {
-    // check later
-
     const SSfastprocess = dm.global_vars.SSfastprocess;
     SSfastprocess.priority = 90;
-    SSfastprocess.flags = SSfastprocess.flags & ~4;
+    SSfastprocess.flags = SSfastprocess.flags & ~4; // this might not work when transpiled
 
     const SSlua = dm.global_vars.SSlua;
     SSlua.priority = 110;
@@ -44,14 +42,14 @@ const totalTimeTaken: Record<number, number> = {};
 const totalCallCount: Record<number, number> = {};
 
 let startPerfTrack = () => {
-    const [line] = debug.info(2, "l");
-
-    lastTimeTaken = os.clock();
     worldTime = dm.world.time;
 
+    const [line] = debug.info(2, "l");
     timeAvg[line] = 0;
     totalTimeTaken[line] = 0;
     totalCallCount[line] = (totalCallCount[line] ?? 0) + 1;
+
+    lastTimeTaken = os.clock();
 };
 
 // function isTypeLite(thing: Byond.Datum, type: string): boolean {
@@ -109,8 +107,9 @@ function getPlane(newPlane: number, zReference: Byond.Atom): number {
             if (zReference.z !== undefined) {
                 turfPlaneOffsets = SSmapping.z_level_to_plane_offset[zReference.z] ?? 0;
             } else {
-                if (SSmapping.plane_to_offset !== undefined) {
-                    turfPlaneOffsets = SSmapping.plane_to_offset[tostring(zReference.plane)] ?? 0;
+                const offset = SSmapping.plane_to_offset[tostring(zReference.plane)];
+                if (offset && offset !== 0) {
+                    turfPlaneOffsets = offset;
                 } else {
                     turfPlaneOffsets = zReference.plane;
                 }
@@ -136,7 +135,7 @@ function ref(thing: Byond.Datum): string {
 declare var allHumanData: Record<string, HumanData>;
 allHumanData = allHumanData ?? {};
 
-function getZombieMutation(human: Byond.Atom) {
+function getZombieMutation(human: Byond.Mob.Living.Carbon.Human) {
     return allHumanData[ref(human)];
 }
 
@@ -144,14 +143,14 @@ function hasTrait(target: Byond.Datum, trait: string) {
     return dm.global_procs._has_trait(target, trait) === 1;
 }
 
-function isZombie(human: Byond.Atom) {
+function isZombie(human: Byond.Atom): human is Byond.Mob.Living.Carbon.Human {
     if (!SS13.istype(human, "/mob/living/carbon/human")) {
         return false;
     }
 
     const dna = human.dna;
 
-    if (dna === undefined) {
+    if (!dna) {
         return false;
     }
 
@@ -161,7 +160,7 @@ function isZombie(human: Byond.Atom) {
 function infectTarget(human: Byond.Mob.Living.Carbon.Human, defType: string) {
     let infection = human.get_organ_slot("zombie_infection");
 
-    if (SS13.is_valid(infection) === 1) {
+    if (SS13.is_valid(infection)) {
         return;
     }
 
@@ -226,7 +225,7 @@ type HumanData = {
 
 function RegisterClassSignal(humanData: HumanData, signal: keyof SignalRegistry, callback: (...args: any[]) => any) {
     SS13.register_signal(humanData.human, signal, callback);
-    humanData.classCleanup.push({
+    table.insert(humanData.classCleanup, {
         target: humanData.human,
         signal,
         callback,
@@ -239,7 +238,7 @@ function RegisterClassSignal2(
     callback: (...args: any[]) => any
 ) {
     SS13.register_signal(target, signal, callback);
-    humanData.classCleanup.push({
+    table.insert(humanData.classCleanup, {
         target,
         signal,
         callback,
@@ -363,7 +362,7 @@ function makeZombieController(location: Byond.Turf) {
 
     dm.global_procs._add_trait(controller, "mute", "zs_controller");
 
-    zombieControllers.push(controller);
+    table.insert(zombieControllers, controller);
 
     const nextRally = 0;
     let rallyTimer: string | undefined;
@@ -379,25 +378,28 @@ function makeZombieController(location: Byond.Turf) {
         if (!SS13.istype(target, "/turf")) {
             to_chat(controller, `<span class='notice'>You rally nearby zombies to attack ${tostring(target)}</span>`);
             rallyTimer = SS13.start_loop(30, 1, () => {
-                delete zombieControllerTargets[controllerRef];
+                // @ts-expect-error assiging undefined deletes in lua
+                zombieControllerTargets[controllerRef] = undefined;
             });
         } else {
             to_chat(controller, "<span class='notice'>You rally nearby zombies to the targeted location</span>");
             rallyTimer = SS13.start_loop(10, 1, () => {
-                delete zombieControllerTargets[controllerRef];
+                // @ts-expect-error assiging undefined deletes in lua
+                zombieControllerTargets[controllerRef] = undefined;
             });
         }
 
         const potentialTargets = dm.global_procs.get_hearers_in_range(10, controller);
 
-        for (const zombie of potentialTargets) {
+        for (const [, zombie] of ipairs(potentialTargets)) {
             if (!isZombie(zombie)) {
                 continue;
             }
 
             const mutationData = getZombieMutation(zombie);
 
-            if (mutationData?.class !== "Zombie (AI)") {
+            // biome-ignore lint/complexity/useOptionalChain: transpilation
+            if (!mutationData || mutationData.class !== "Zombie (AI)") {
                 continue;
             }
 
@@ -413,7 +415,9 @@ function makeZombieController(location: Byond.Turf) {
 
     const oldZ = controller.z;
 
-    if (oldZ !== undefined && deadPlayersByZLevel[oldZ] !== undefined) {
+    if (oldZ && deadPlayersByZLevel[oldZ]) {
         list.add(deadPlayersByZLevel[oldZ], controller);
     }
+
+    // ... continue at :513
 }
