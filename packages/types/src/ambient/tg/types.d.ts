@@ -1009,12 +1009,9 @@ declare namespace Bitflags {
         type RuneChat = 8;
     }
 
-    type Emote =
-        | Bitflags.Emote.Audible
-        | Bitflags.Emote.Visible
-        | Bitflags.Emote.Important
-        | Bitflags.Emote.RuneChat
-        | number;
+    type Emote = Bitflag<
+        [Bitflags.Emote.Audible, Bitflags.Emote.Visible, Bitflags.Emote.Important, Bitflags.Emote.RuneChat]
+    >;
 
     namespace Mobility {
         type Move = 1;
@@ -1028,17 +1025,19 @@ declare namespace Bitflags {
         type LieDown = 256;
     }
 
-    type Mobility =
-        | Bitflags.Mobility.Move
-        | Bitflags.Mobility.Stand
-        | Bitflags.Mobility.Pickup
-        | Bitflags.Mobility.Use
-        | Bitflags.Mobility.Ui
-        | Bitflags.Mobility.Storage
-        | Bitflags.Mobility.Pull
-        | Bitflags.Mobility.Rest
-        | Bitflags.Mobility.LieDown
-        | number;
+    type Mobility = Bitflag<
+        [
+            Bitflags.Mobility.Move,
+            Bitflags.Mobility.Stand,
+            Bitflags.Mobility.Pickup,
+            Bitflags.Mobility.Use,
+            Bitflags.Mobility.Ui,
+            Bitflags.Mobility.Storage,
+            Bitflags.Mobility.Pull,
+            Bitflags.Mobility.Rest,
+            Bitflags.Mobility.LieDown,
+        ]
+    >;
 
     namespace Organ {
         type Organic = 1;
@@ -1060,25 +1059,27 @@ declare namespace Bitflags {
         type Unusable = 65536;
     }
 
-    type Organ =
-        | Bitflags.Organ.Organic
-        | Bitflags.Organ.Robotic
-        | Bitflags.Organ.Mineral
-        | Bitflags.Organ.Frozen
-        | Bitflags.Organ.Failing
-        | Bitflags.Organ.EMP
-        | Bitflags.Organ.Vital
-        | Bitflags.Organ.Edible
-        | Bitflags.Organ.Unremovable
-        | Bitflags.Organ.Hidden
-        | Bitflags.Organ.Virgin
-        | Bitflags.Organ.Prominent
-        | Bitflags.Organ.Hazardous
-        | Bitflags.Organ.External
-        | Bitflags.Organ.Ghost
-        | Bitflags.Organ.Mutant
-        | Bitflags.Organ.Unusable
-        | number;
+    type Organ = Bitflag<
+        [
+            Bitflags.Organ.Organic,
+            Bitflags.Organ.Robotic,
+            Bitflags.Organ.Mineral,
+            Bitflags.Organ.Frozen,
+            Bitflags.Organ.Failing,
+            Bitflags.Organ.EMP,
+            Bitflags.Organ.Vital,
+            Bitflags.Organ.Edible,
+            Bitflags.Organ.Unremovable,
+            Bitflags.Organ.Hidden,
+            Bitflags.Organ.Virgin,
+            Bitflags.Organ.Prominent,
+            Bitflags.Organ.Hazardous,
+            Bitflags.Organ.External,
+            Bitflags.Organ.Ghost,
+            Bitflags.Organ.Mutant,
+            Bitflags.Organ.Unusable,
+        ]
+    >;
 }
 
 declare namespace Enums {

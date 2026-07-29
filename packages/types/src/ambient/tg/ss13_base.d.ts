@@ -6,6 +6,8 @@
 /// <reference path="./typepaths.d.ts" />
 
 /**
+ * See [SS13_base.lua](https://github.com/tgstation/tgstation/blob/a839cd44c27edb3c8cf9f0048f4afc03988787ae/lua/SS13_base.lua) for implementation.
+ *
  * @noResolution
  */
 declare module "SS13_base" {

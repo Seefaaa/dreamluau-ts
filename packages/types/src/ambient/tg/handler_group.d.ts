@@ -3,6 +3,12 @@
 /// <reference path="../../index.d.ts" />
 
 /**
+ * HandlerGroup is a class object that allows you to register signals on datums and clear them all at once.
+ *
+ * It is useful for managing signal handlers in a clean and organized way.
+ *
+ * See [handler_group.lua](https://github.com/tgstation/tgstation/blob/a839cd44c27edb3c8cf9f0048f4afc03988787ae/lua/handler_group.lua) for implementation.
+ *
  * @noResolution
  */
 declare module "handler_group" {

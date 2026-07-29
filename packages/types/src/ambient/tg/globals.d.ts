@@ -14,7 +14,23 @@ declare interface GlobalVars {
     };
 }
 
-/** @noSelf */
+/**
+ * Global procs are functions that are available globally, and can be called from
+ * any context without needing to reference a specific object.
+ *
+ * To extends this interface, you can use the following pattern:
+ *
+ * @example
+ * ```ts
+ * declare global {
+ *     `/** @noSelf * /` // without the space between `* /` and remove backticks
+ *     interface GlobalProcs {
+ *         my_custom_proc(arg1: string, arg2: number): void;
+ *     }
+ * }
+ *
+ * @noSelf
+ */
 declare interface GlobalProcs {
     REF(thing: Byond.Datum): string;
     _has_trait(target: Byond.Datum, trait: string): Byond.Bool;
