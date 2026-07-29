@@ -19,10 +19,11 @@ declare module "SS13_base" {
 
     export function ispath(thing: Byond.Type, path: Byond.Type): boolean;
 
-    export function type(type: string): Byond.Type;
+    export function type<T extends keyof TypePathRegistry>(type: T): Byond.Type<TypePathRegistry[T]>;
+    // export function type(type: string): Byond.Type<unknown>;
 
     export function istype<T extends keyof TypePathRegistry>(thing: any, type: T): thing is TypePathRegistry[T];
-    export function istype(thing: any, type: string): boolean;
+    export function istype<T>(thing: T, type: string): thing is NonNullable<T>;
 
     export function typecacheof(types: string[]): Byond.List<number, Byond.Type>;
 
@@ -42,15 +43,20 @@ declare module "SS13_base" {
 
     export function qdel(datum: Byond.Datum): boolean;
 
-    export function is_valid(datum: Byond.Datum | undefined): boolean;
+    export function is_valid(datum: Byond.Datum | undefined): datum is Byond.Datum;
 
     export function check_tick(high_priority?: Byond.Bool): void;
 
-    export function await<R = unknown>(
-        thing_to_call: Byond.Datum,
-        proc_to_call: string,
-        ...args: any[]
-    ): LuaMultiReturn<[R, string]>;
+    export function await<F extends MethodsOf<GlobalProcs>>(
+        thing_to_call: typeof import("SS13").global_proc,
+        proc_to_call: F,
+        ...args: GlobalProcs[F] extends (...args: infer U) => any ? U : never
+    ): LuaMultiReturn<[GlobalProcs[F] extends (...args: any[]) => infer R ? R : never, string]>;
+    export function await<T extends Byond.Datum, F extends MethodsOf<T>>(
+        thing_to_call: T,
+        proc_to_call: F,
+        ...args: T[F] extends (...args: infer U) => any ? U : never
+    ): LuaMultiReturn<[T[F] extends (...args: any[]) => infer R ? R : never, string]>;
 
     export function register_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
         datum: D,
@@ -58,9 +64,9 @@ declare module "SS13_base" {
         callback: SignalRegistry<D>[S]
     ): boolean;
 
-    export function unregister_signal<F extends (...args: any[]) => any>(
-        datum: Byond.Datum,
-        signal: string,
-        callback: F
+    export function unregister_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
+        datum: D,
+        signal: S,
+        callback?: SignalRegistry<D>[S]
     ): void;
 }

@@ -7,6 +7,11 @@ declare interface GlobalVars {
     SSmapping: SS13.SSmapping;
     SSmobs: SS13.SSmobs;
     SSspatial_grid: SS13.SSspatial_grid;
+    SSpolling: SS13.SSpolling;
+
+    GLOB: {
+        mob_living_list: Byond.List<number, Byond.Mob.Living>;
+    };
 }
 
 /** @noSelf */
@@ -25,7 +30,13 @@ declare interface GlobalProcs {
         source: Byond.Atom,
         message_type?: number
     ): void;
+
     _add_trait(target: Byond.Datum, trait: string, source: string): void;
+    _remove_trait(target: Byond.Datum, trait: string, source: string): void;
+
+    _get_step(ref: Byond.Atom, direction: Byond.Direction): Byond.Turf;
+    _get_dir(from: Byond.Atom, to: Byond.Atom): Byond.Direction;
+    _turn(direction: Byond.Direction, angle: number): Byond.Direction;
 
     /**
      * The exact same as get_hearers_in_view, but not limited by visibility. Does no filtering for traits, line of sight, or any other such criteria.
@@ -45,5 +56,94 @@ declare interface GlobalProcs {
             | "recursive_contents_hearing_sensitive"
             | "recursive_contents_client_mobs"
             | "recursive_contents_active_storage"
-    ): Byond.List<number, Byond.Atom.Movable>;
+    ): Byond.List<number, Byond.Atom.Movable> | undefined;
+
+    /**
+     * Runs byond's html encoding sanitization proc, after replacing new-lines and tabs for the # character.
+     */
+    sanitize(text: string): string;
+
+    _pick_list<T>(list: readonly [T, ...T[]]): T;
+    _pick_list<T>(list: Byond.List<number, T> | readonly T[]): T | undefined;
+    // _pick_list<T>(list: Byond.List<T, unknown>): T | undefined;
+
+    message_admins(msg: string): void;
+
+    key_name_admin(
+        whom: Byond.Mob | Byond.Client | string | Byond.Datum.Mind | Byond.Atom | Byond.Datum,
+        include_name?: Byond.Bool | boolean
+    ): string;
+
+    /**
+     * Creates a TGUI window with a text input. Returns the user's response.
+     *
+     * This proc should be used to create windows for text entry that the caller will wait for a response from.
+     * If tgui fancy chat is turned off: Will return a normal input. If max_length is specified, will return
+     * stripped_multiline_input.
+     *
+     * Arguments:
+     * * user - The user to show the text input to.
+     * * message - The content of the text input, shown in the body of the TGUI window.
+     * * title - The title of the text input modal, shown on the top of the TGUI window.
+     * * default - The default (or current) value, shown as a placeholder.
+     * * max_length - Specifies a max length for input. By default is infinity.
+     * * multiline -  Bool that determines if the input box is much larger. Good for large messages, laws, etc.
+     * * encode - Toggling this determines if input is filtered via html_encode. Setting this to FALSE gives raw input.
+     * * timeout - The timeout of the textbox, after which the modal will close and qdel itself. Set to zero for no timeout.
+     */
+    tgui_input_text(
+        user: Byond.Mob | Byond.Client,
+        message: string,
+        title?: string,
+        default_?: string,
+        max_length?: number,
+        multiline?: Byond.Bool | boolean,
+        encode?: Byond.Bool | boolean,
+        timeout?: number,
+        ui_state?: unknown
+    ): string | undefined;
+
+    is_species(mob: Byond.Mob, species: Byond.Type<Byond.Datum.Species>): Byond.Bool;
+
+    /**
+     * playsound is a proc used to play a 3D sound in a specific range. This uses SOUND_RANGE + extra_range to determine that.
+     *
+     * Arguments:
+     * * source - Origin of sound.
+     * * soundin - Either a file, or a string that can be used to get an SFX.
+     * * vol - The volume of the sound, excluding falloff and pressure affection.
+     * * vary - bool that determines if the sound changes pitch every time it plays.
+     * * extrarange - modifier for sound range. This gets added on top of SOUND_RANGE.
+     * * falloff_exponent - Rate of falloff for the audio. Higher means quicker drop to low volume. Should generally be over 1 to indicate a quick dive to 0 rather than a slow dive.
+     * * frequency - playback speed of audio.
+     * * channel - The channel the sound is played at.
+     * * pressure_affected - Whether or not difference in pressure affects the sound (E.g. if you can hear in space).
+     * * ignore_walls - Whether or not the sound can pass through walls.
+     * * falloff_distance - Distance at which falloff begins. Sound is at peak volume (in regards to falloff) aslong as it is in this range.
+     * * volume_preference - Optional: Will be checked to modify the volume of the sound for each listener.
+     * * min_volume - minimum volume the sound can reach at max_range.
+     */
+    playsound(
+        source: Byond.Atom,
+        soundin: Byond.Sound | string,
+        vol: number,
+        vary?: Byond.Bool | boolean,
+        extrarange?: number,
+        falloff_exponent?: number,
+        frequency?: number,
+        channel?: number,
+        pressure_affected?: Byond.Bool | boolean,
+        ignore_walls?: Byond.Bool | boolean,
+        falloff_distance?: number,
+        use_reverb?: Byond.Bool | boolean,
+        volume_preference?: Byond.Datum.Preference.Numeric.Volume,
+        min_volume?: number
+    ): void;
+
+    /**
+     * Get a list of turfs in a line from `starting_atom` to `ending_atom`.
+     *
+     * Uses the ultra-fast [Bresenham Line-Drawing Algorithm](https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm).
+     */
+    get_line(starting_atom: Byond.Atom, ending_atom: Byond.Atom): Byond.List<number, Byond.Turf>;
 }

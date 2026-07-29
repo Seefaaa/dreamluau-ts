@@ -97,7 +97,7 @@ declare namespace list {
      * @param list The list to add the values to.
      * @param args The values to add to the list.
      */
-    function add(list: Byond.List, ...args: any[]): void;
+    function add<T>(list: Byond.List<number, T>, ...args: any[]): void;
 
     /**
      * Logically equivalent to the DM statement list.Copy(start, end).
@@ -105,7 +105,7 @@ declare namespace list {
      * @param start The starting index to copy from.
      * @param end The ending index to copy to.
      */
-    function copy(list: Byond.List, start?: number, end?: number): Byond.List;
+    function copy<T>(list: Byond.List<number, T>, start?: number, end?: number): Byond.List<number, T>;
 
     /**
      * Logically equivalent to the DM statement list.Cut(start, end).
@@ -113,7 +113,7 @@ declare namespace list {
      * @param start The starting index to cut from.
      * @param end The ending index to cut to.
      */
-    function cut(list: Byond.List, start?: number, end?: number): Byond.List;
+    function cut<T>(list: Byond.List<number, T>, start?: number, end?: number): Byond.List<number, T>;
 
     /**
      * Logically equivalent to the DM statement list.Find(item, start, end).
@@ -122,7 +122,7 @@ declare namespace list {
      * @param start The starting index to search from.
      * @param end The ending index to search to.
      */
-    function find(list: Byond.List, item: any, start?: number, end?: number): number;
+    function find<T>(list: Byond.List<number, T>, item: T, start?: number, end?: number): number;
 
     /**
      * Logically equivalent to the DM statement list.Insert(item, ...).
@@ -130,7 +130,7 @@ declare namespace list {
      * @param index The index to insert at.
      * @param args The values to insert.
      */
-    function insert(list: Byond.List, index: number, ...args: any[]): number;
+    function insert<T>(list: Byond.List<number, T>, index: number, ...args: any[]): number;
 
     /**
      * Logically equivalent to the statement list.Join(glue, start, end).
@@ -139,21 +139,21 @@ declare namespace list {
      * @param start The starting index.
      * @param end The ending index.
      */
-    function join(list: Byond.List, glue: string, start?: number, end?: number): string;
+    function join<T>(list: Byond.List<number, T>, glue: string, start?: number, end?: number): string;
 
     /**
      * Logically equivalent to the DM statement list.Remove(...).
      * @param list The list to remove from.
      * @param args The values to remove.
      */
-    function remove(list: Byond.List, ...args: any[]): number;
+    function remove<T>(list: Byond.List<number, T>, ...args: T[]): number;
 
     /**
      * Logically equivalent to the DM statement list.RemoveAll(...).
      * @param list The list to remove from.
      * @param args The values to remove.
      */
-    function remove_all(list: Byond.List, ...args: any[]): number;
+    function remove_all<T>(list: Byond.List<number, T>, ...args: any[]): number;
 
     /**
      * Logically equivalent to the DM statement list.Splice(start, end, ...).
@@ -162,7 +162,7 @@ declare namespace list {
      * @param end The ending index.
      * @param args The values to insert.
      */
-    function splice(list: Byond.List, start?: number, end?: number, ...args: any[]): void;
+    function splice<T>(list: Byond.List<number, T>, start?: number, end?: number, ...args: any[]): void;
 
     /**
      * Logically equivalent to the DM statement list.Swap(index_1, index_2).
@@ -170,29 +170,34 @@ declare namespace list {
      * @param index_1 The first index.
      * @param index_2 The second index.
      */
-    function swap(list: Byond.List, index_1: number, index_2: number): void;
+    function swap<T>(list: Byond.List<number, T>, index_1: number, index_2: number): void;
 
     /**
      * Creates a table that is a copy of `list`. If `deep` is true, `to_table` will be called on any lists inside that list.
      * @param list The list to convert.
      * @param deep Whether to deeply convert nested lists.
      */
-    function to_table(list: Byond.List, deep?: boolean): LuaTable;
+    function to_table<T extends AnyNotNil, V>(
+        list: Byond.List<T extends number ? never : T, V>,
+        deep?: boolean
+    ): LuaTable<T, V>;
+    function to_table<T>(list: Byond.List<number, T>, deep?: boolean): T[];
 
     /**
      * Creates a list that is a copy of `table`. This is not strictly necessary, as tables are automatically converted to lists when passed back into DM, using the same internal logic as `from_table`.
      * @param table The table to convert.
      */
     function from_table<K extends any[]>(table: K): Byond.List<number, K[number]>;
-    // function from_table<K extends keyof object, V>(table: Record<K, V>): Byond.List<K, V>;
-    function from_table(table: object): Byond.List;
 
     /**
      * Returns a copy of `list`, containing only elements that are objects descended from `path`.
      * @param list The list to filter.
      * @param path The path to filter by.
      */
-    function filter(list: Byond.List, path: string): Byond.List;
+    function filter<T, P extends keyof TypePathRegistry, F extends T & TypePathRegistry[P]>(
+        list: Byond.List<number, T>,
+        path: P
+    ): Byond.List<number, F>;
 }
 
 /**
@@ -221,19 +226,19 @@ declare namespace pointer {
 
 declare namespace Byond {
     type Bool = 1 | 0;
+    type True = Extract<Byond.Bool, 1>;
+    type False = Extract<Byond.Bool, 0>;
 
     class Type<T = unknown> {
         readonly __sealed: true;
     }
 
-    class List<K = number, V = unknown> {
-        // readonly __sealed: true;
-        [key: string]: V;
-        [key: number]: V;
-        [Symbol.iterator](): IterableIterator<V>;
+    interface List<K extends AnyNotNil, V> extends LuaPairsIterable<K, V> {
+        get: LuaTableGetMethod<K, V | undefined>;
+        set: LuaTableSetMethod<K, V>;
+        delete: LuaTableDeleteMethod<K>;
+        length: LuaLengthMethod<number>;
     }
-
-    // type List<K extends AnyNotNil = number, V = unknown> = LuaTable<K, V>;
 
     class Sound {
         readonly __sealed: true;
@@ -243,8 +248,19 @@ declare namespace Byond {
         readonly __sealed: true;
     }
 
+    class Image {
+        readonly __sealed: true;
+    }
+
     class Datum {
         readonly type: Type;
+    }
+
+    class Client extends Datum {
+        /**
+         * This is a read-only value that contains the player’s key. Once the player is attached to a mob M, M.key == M.client.key.
+         */
+        key: string;
     }
 
     class Atom extends Datum {
@@ -310,10 +326,32 @@ declare namespace Byond {
          * Icons may appear differently depending on the icon state. For example, turf door icons could have “open” and “closed” states. If a state is specified that does not exist in the icon file, the default null state will be displayed if it exists.
          */
         icon_state: string | undefined;
+
+        /**
+         * Except in the case of areas, this list is always restricted to objs and mobs (ie movable objects). Only direct contents are listed. Items inside of a bag object, for example, would not show up in the mob’s contents list.
+         *
+         * The contents of areas are a little different. The turfs contained in the area are in the list along with any objs or mobs directly contained by those turfs.
+         *
+         * If a movable atom uses the bound vars to change its physical size, or step_x or step_y to change its position, it may cover more than one turf. In that case, those turfs’ contents won’t just contain anything directly in them, but also any atoms overhanging them. I.e., if a turf is in a mob’s locs list, then the mob is in that turf’s contents list. (See locs for more information.)
+         */
+        contents: Byond.List<number, Byond.Atom.Movable>;
+
+        /**
+         * Where atoms should drop if taken from this atom
+         */
+        drop_location(this: Byond.Atom): Byond.Atom | undefined;
     }
 
     namespace Atom {
-        class Movable extends Byond.Atom {}
+        class Movable extends Byond.Atom {
+            Move(
+                this: Byond.Atom.Movable,
+                new_loc: Byond.Atom,
+                direct?: Byond.Direction,
+                step_x?: number,
+                step_y?: number
+            ): Byond.Bool | undefined;
+        }
     }
 
     class Obj extends Byond.Atom {}
@@ -321,6 +359,22 @@ declare namespace Byond {
     class Mob extends Atom.Movable {
         /** This is the maximum level of invisibility that the mob can see. */
         see_invisible: number;
+
+        /**
+         * This is a reference to a set of properties specific to the player. Therefore non-player mobs (NPCs) do not have a client (client = null).
+         *
+         * Setting a mob’s client connects that player’s client to the mob.
+         */
+        client: Byond.Client | undefined;
+
+        /**
+         * For player mobs (PCs) this is the value of the player’s key. For non-player mobs (NPCs), this is the value of the “desired” key. This means that if a player with that key logs into the world, he will be connected to that mob (as opposed to a new one of type world.mob).
+         *
+         * Setting the mob’s key will cause a client with the same key to connect to the mob. Any other mob with the same key will lose it.
+         *
+         * Key values are always compared in canonical form (ie the form returned by ckey()) so setting a mob’s key to “Dan”, “dan” are equivalent as far as controlling player linkage.
+         */
+        key: string | undefined;
     }
 
     class Turf extends Atom {}
@@ -330,4 +384,22 @@ declare namespace Byond {
         time: number;
         tick_lag: number;
     }
+
+    namespace Direction {
+        type South = 1;
+        type North = 2;
+        type East = 4;
+        type West = 8;
+        type Cardinal = South | North | East | West;
+
+        type Southeast = 5;
+        type Southwest = 9;
+        type Northeast = 6;
+        type Northwest = 10;
+        type Ordinal = Southeast | Southwest | Northeast | Northwest;
+    }
+
+    type Direction = Direction.Cardinal | Direction.Ordinal;
 }
+
+// declare function pairs<K, V>(t: Byond.List<K extends number ? never : K, V>): LuaIterable<LuaMultiReturn<[K, V]>>;

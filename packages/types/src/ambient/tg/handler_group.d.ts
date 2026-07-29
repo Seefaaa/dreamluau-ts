@@ -23,12 +23,17 @@ interface HandlerGroup {
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted.
      */
-    register_signal(this: HandlerGroup, datum: Byond.Datum, signal: string, func: (...args: any[]) => any): void;
+    register_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
+        this: HandlerGroup,
+        datum: D,
+        signal: S,
+        func: SignalRegistry<D>[S]
+    ): void;
 
     /**
      * Clears all the signals that have been registered on this HandlerGroup
      */
-    clear(): void;
+    clear(this: HandlerGroup): void;
 
     /**
      * Clears all the signals that have been registered on this HandlerGroup when a specific signal is sent on a datum.
@@ -36,7 +41,20 @@ interface HandlerGroup {
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted.
      */
-    clear_on(this: HandlerGroup, datum: Byond.Datum, signal: string, func: (...args: any[]) => any): void;
+    clear_on<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
+        this: HandlerGroup,
+        datum: D,
+        signal: S,
+        func: SignalRegistry<D>[S]
+    ): void;
+}
+
+interface HandlerGroupConstructor {
+    /**
+     * Creates a new HandlerGroup instance. A HandlerGroup is a collection of signal handlers that can be cleared all at once.
+     * @returns A new HandlerGroup instance.
+     */
+    new: (this: void) => HandlerGroup;
 
     /**
      * Registers a signal on a datum and clears it after it is called once.
@@ -44,9 +62,10 @@ interface HandlerGroup {
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted. It will be cleared after it is called once.
      */
-    register_once(this: HandlerGroup, datum: Byond.Datum, signal: string, func: (...args: any[]) => any): void;
-}
-
-interface HandlerGroupConstructor {
-    new: () => HandlerGroup;
+    register_once<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
+        this: void,
+        datum: D,
+        signal: S,
+        func: SignalRegistry<D>[S]
+    ): void;
 }
