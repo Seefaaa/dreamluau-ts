@@ -24,18 +24,7 @@
  * @noSelf
  */
 declare interface Signals<S extends Byond.Datum> {
-    mob_ability_base_started: (
-        source: S,
-        actionTarget: Byond.Datum.Action.Cooldown,
-        target: Byond.Atom
-    ) => Signal<[COMPONENT_BLOCK_ABILITY_START]>;
-    mob_ctrl_clicked: (source: S, target: Byond.Atom) => Signal;
-    mob_client_move_possessed_object: (
-        source: S extends Byond.Mob ? S : never,
-        new_loc: Byond.Atom,
-        direct: Byond.Direction.Cardinal
-    ) => Signal<[COMSIG_MOB_CLIENT_BLOCK_PRE_NON_LIVING_MOVE]>;
-    parent_qdeleting: (source: S, force: Byond.Bool) => Signal;
+    atom_examine: (source: S, user: Byond.Mob, examine_list: Byond.List<number, string>) => Signal;
     atom_expose_reagents: (
         source: S,
         reagents: Byond.List<Byond.Datum.Reagent, number>,
@@ -43,6 +32,22 @@ declare interface Signals<S extends Byond.Datum> {
         methods: number,
         show_message: Byond.Bool
     ) => Signal<[COMPONENT_NO_EXPOSE_REAGENTS]>;
+    atom_relaymove: (source: S, user: Byond.Mob.Living, direct: Byond.Direction) => Signal<[COMSIG_BLOCK_RELAYMOVE]>;
+    atom_entered: (
+        source: S,
+        arrived: Byond.Atom.Movable,
+        old_loc: Byond.Atom,
+        old_locs: Byond.List<number, Byond.Atom> | undefined
+    ) => Signal;
+    carbon_gain_organ: (
+        source: S extends Byond.Mob.Living.Carbon ? S : never,
+        organ: Byond.Obj.Item.Organ,
+        special: Byond.Bool
+    ) => Signal;
+    ctrl_click: (
+        source: S extends Byond.Atom ? S : never,
+        user: Byond.Mob
+    ) => Signal<[CLICK_ACTION_SUCCESS, CLICK_ACTION_BLOCKING]>;
     fire_casing: (
         source: S,
         target: Byond.Atom,
@@ -55,21 +60,26 @@ declare interface Signals<S extends Byond.Datum> {
         distro: number | undefined,
         thrown_proj: Byond.Obj.Projectile
     ) => Signal;
-    projectile_self_on_hit: (
-        source: S,
-        firer: Byond.Atom.Movable | undefined,
+    handle_topic: (source: S, usr: Byond.Mob, href_list: Byond.List<string, string>) => Signal;
+    item_pre_attack: (
+        source: S extends Byond.Obj.Item ? S : never,
         target: Byond.Atom,
-        angle: number,
-        hit_limb_zone: Enums.BodyZoneAll | undefined,
-        blocked: number,
-        pierce_hit: Byond.Bool
-    ) => Signal;
-    movable_pre_impact: (
-        source: S extends Byond.Atom.Movable ? S : never,
-        hit_atom: Byond.Atom,
-        throwingdatum: Byond.Datum.ThrownThing | undefined
-    ) => Signal<[COMPONENT_MOVABLE_IMPACT_FLIP_HITPUSH, COMPONENT_MOVABLE_IMPACT_NEVERMIND]>;
-    atom_relaymove: (source: S, user: Byond.Mob.Living, direct: Byond.Direction) => Signal<[COMSIG_BLOCK_RELAYMOVE]>;
+        user: Byond.Mob.Living,
+        modifiers: Byond.List<string, any> | undefined,
+        attack_modifiers: Byond.List<string, any> | undefined
+    ) => Signal<[COMPONENT_CANCEL_ATTACK_CHAIN]>;
+    living_death: (source: S extends Byond.Mob.Living ? S : never, gibbed: Byond.Bool) => Signal;
+    mob_ability_base_started: (
+        source: S,
+        actionTarget: Byond.Datum.Action.Cooldown,
+        target: Byond.Atom
+    ) => Signal<[COMPONENT_BLOCK_ABILITY_START]>;
+    mob_client_move_possessed_object: (
+        source: S extends Byond.Mob ? S : never,
+        new_loc: Byond.Atom,
+        direct: Byond.Direction.Cardinal
+    ) => Signal<[COMSIG_MOB_CLIENT_BLOCK_PRE_NON_LIVING_MOVE]>;
+    mob_ctrl_clicked: (source: S, target: Byond.Atom) => Signal;
     mob_statchange: (source: S extends Byond.Mob ? S : never, new_stat: number, old_stat: number) => Signal;
     movable_moved: (
         source: S extends Byond.Atom.Movable ? S : never,
@@ -79,25 +89,26 @@ declare interface Signals<S extends Byond.Datum> {
         old_locs: Byond.List<number, Byond.Atom> | undefined,
         momentum_change: Byond.Bool
     ) => Signal;
-    item_pre_attack: (
-        source: S extends Byond.Obj.Item ? S : never,
-        target: Byond.Atom,
-        user: Byond.Mob.Living,
-        modifiers: Byond.List<string, any> | undefined,
-        attack_modifiers: Byond.List<string, any> | undefined
-    ) => Signal<[COMPONENT_CANCEL_ATTACK_CHAIN]>;
-    living_death: (source: S extends Byond.Mob.Living ? S : never, gibbed: Byond.Bool) => Signal;
-    atom_entered: (
+    movable_pre_impact: (
+        source: S extends Byond.Atom.Movable ? S : never,
+        hit_atom: Byond.Atom,
+        throwingdatum: Byond.Datum.ThrownThing | undefined
+    ) => Signal<[COMPONENT_MOVABLE_IMPACT_FLIP_HITPUSH, COMPONENT_MOVABLE_IMPACT_NEVERMIND]>;
+    parent_preqdeleted: (source: S, force: Byond.Bool) => Signal;
+    parent_qdeleting: (source: S, force: Byond.Bool) => Signal;
+    projectile_self_on_hit: (
         source: S,
-        arrived: Byond.Atom.Movable,
-        old_loc: Byond.Atom,
-        old_locs: Byond.List<number, Byond.Atom> | undefined
+        firer: Byond.Atom.Movable | undefined,
+        target: Byond.Atom,
+        angle: number,
+        hit_limb_zone: Enums.BodyZoneAll | undefined,
+        blocked: number,
+        pierce_hit: Byond.Bool
     ) => Signal;
-    carbon_gain_organ: (
-        source: S extends Byond.Mob.Living.Carbon ? S : never,
-        organ: Byond.Obj.Item.Organ,
-        special: Byond.Bool
-    ) => Signal;
+    species_gain: (source: S, new_species: Byond.Datum.Species, old_species: Byond.Datum.Species) => Signal;
+    species_loss: (source: S, lost_species: Byond.Datum.Species) => Signal;
+
+    "!mob_created": (source: S extends SS13.SSdcs ? S : never, mob: Byond.Mob) => Signal;
 }
 
 declare type Signal<B = void> = B extends [number, ...number[]]
@@ -125,6 +136,11 @@ type COMSIG_BLOCK_RELAYMOVE = 1;
 
 // item_pre_attack
 type COMPONENT_CANCEL_ATTACK_CHAIN = 1;
+
+// ctrl_click
+type CLICK_ACTION_SUCCESS = 1;
+type CLICK_ACTION_BLOCKING = 2;
+// type CLICK_ACTION_ANY = 3;
 
 /**
  * Edit this only if the trait is actually in the game and not made up

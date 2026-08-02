@@ -2,6 +2,7 @@
 /// <reference path="types.d.ts" />
 
 declare interface GlobalVars {
+    SSdcs: SS13.SSdcs;
     SSfastprocess: SS13.SSfastprocess;
     SSlua: SS13.SSlua;
     SSmapping: SS13.SSmapping;
@@ -11,6 +12,10 @@ declare interface GlobalVars {
 
     GLOB: {
         mob_living_list: Byond.List<number, Byond.Mob.Living>;
+        /**
+         * all ckeys with associated client
+         */
+        directory: Byond.List<string, Byond.Client>;
     };
 }
 
@@ -119,7 +124,59 @@ declare interface GlobalProcs {
         ui_state?: unknown
     ): string | undefined;
 
+    /**
+     * Creates a TGUI window with a list input. Returns the user's selected entry, or undefined if they cancelled.
+     *
+     * Arguments:
+     * * user - The user to show the list input to.
+     * * message - The content of the list input, shown in the body of the TGUI window.
+     * * title - The title of the list input modal, shown on the top of the TGUI window.
+     * * items - The list of selectable options.
+     * * default - The default (or current) value, pre-selected in the list.
+     * * timeout - The timeout of the list, after which the modal will close and qdel itself. Set to zero for no timeout.
+     * * ui_state - The UI state for access checking.
+     */
+    tgui_input_list<T extends string>(
+        user: Byond.Mob | Byond.Client,
+        message: string,
+        title?: string,
+        items?: readonly T[],
+        default_?: T,
+        timeout?: number,
+        ui_state?: unknown
+    ): T | undefined;
+
+    /**
+     * Creates a TGUI alert window and returns the user's response.
+     *
+     * This proc should be used to create alerts that the caller will wait for a response from.
+     * Arguments:
+     * * user - The user to show the alert to.
+     * * message - The content of the alert, shown in the body of the TGUI window.
+     * * title - The of the alert modal, shown on the top of the TGUI window.
+     * * buttons - The options that can be chosen by the user, each string is assigned a button on the UI.
+     * * timeout - The timeout of the alert, after which the modal will close and qdel itself. Set to zero for no timeout.
+     * * autofocus - The bool that controls if this alert should grab window focus.
+     */
+    tgui_alert<T extends string>(
+        user: Byond.Mob | Byond.Client,
+        message: string | undefined,
+        title: string,
+        buttons?: readonly [T, ...T[]],
+        timeout?: number,
+        autofocus?: Byond.Bool | boolean,
+        ui_state?: unknown
+    ): T | undefined;
+
     is_species(mob: Byond.Mob, species: Byond.Type<Byond.Datum.Species>): Byond.Bool;
+
+    do_sparks(
+        number: number,
+        cardinal_only: Byond.Bool | boolean,
+        source: Byond.Atom,
+        holder?: Byond.Atom,
+        spark_type?: Byond.Type<Byond.Datum.EffectSystem.Basic.SparkSpread>
+    ): void;
 
     /**
      * playsound is a proc used to play a 3D sound in a specific range. This uses SOUND_RANGE + extra_range to determine that.
@@ -155,6 +212,28 @@ declare interface GlobalProcs {
         volume_preference?: Byond.Datum.Preference.Numeric.Volume,
         min_volume?: number
     ): void;
+
+    /**
+     * One proc for easy spawning of pods in the code to drop off items before whizzling (please don't proc call this in game, it will destroy you)
+     *
+     * Arguments:
+     * * specifications: special mods to the pod, see non var edit specifications for details on what you should fill this with
+     * Non var edit specifications:
+     * * target = where you want the pod to drop
+     * * path = a special specific pod path if you want, this can save you a lot of var edits
+     * * style = style of the pod, defaults to the normal pod
+     * * spawn = spawned path or a list of the paths spawned, what you're sending basically
+     * Returns the pod spawned, in case you want to spawn items yourself and modify them before putting them in.
+     */
+    podspawn<T extends Byond.Obj.Structure.Closet.Supplypod.Podspawn, S extends Byond.Datum.PodStyle>(specifications: {
+        target: Byond.Turf;
+        path?: Byond.Type<T>;
+        style?: Byond.Type<S>;
+        spawn?:
+            | Byond.List<Byond.Type<Byond.Atom.Movable>, number>
+            | Byond.List<number, Byond.Atom.Movable>
+            | Byond.Atom.Movable;
+    }): T;
 
     /**
      * Get a list of turfs in a line from `starting_atom` to `ending_atom`.

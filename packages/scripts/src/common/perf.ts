@@ -1,29 +1,28 @@
 let lastTimeTaken = os.clock();
 let worldTime = dm.world.time;
 
-const timeAvg: Record<number, number> = {};
-const sleepingAt: Record<number, boolean> = {};
-const totalTimeTaken: Record<number, number> = {};
-const totalCallCount: Record<number, number> = {};
+export const timeAvg: Record<number, number> = {};
+export const sleepingAt: Record<number, boolean> = {};
+export const totalTimeTaken: Record<number, number> = {};
+export const totalCallCount: Record<number, number> = {};
+
+export const getReadablePerfStat = (number: number) => tostring(math.floor(number * 1_000_000) / 1_000);
 
 let startPerfTrack = () => {
-    worldTime = dm.world.time;
-
-    const [line] = debug.info(2, "l");
+    const line = debug.info(2, "l");
     timeAvg[line] = 0;
     totalTimeTaken[line] = 0;
     totalCallCount[line] = (totalCallCount[line] ?? 0) + 1;
 
+    worldTime = dm.world.time;
     lastTimeTaken = os.clock();
 };
 
 let checkPerf = (ignoreSleep: boolean = false) => {
-    const [line] = debug.info(2, "l");
+    const line = debug.info(2, "l");
 
     if (worldTime !== dm.world.time) {
-        if (ignoreSleep) {
-            return;
-        }
+        if (ignoreSleep) return;
         sleepingAt[line] = true;
         worldTime = dm.world.time;
     }

@@ -15,6 +15,11 @@ declare type OneBitOf<Flags extends number[]> = Flags extends [
     : 0;
 
 /**
+ * Extracts the return type of a function F when called with arguments of type A.
+ */
+declare type ReturnsWhen<F, A extends any[]> = F extends (...args: A) => infer R ? R : never;
+
+/**
  * Actually, doesn't do anything because you can't do bitwise operations on types.
  * But it is a good reminder that the type is a bitflag and not just a number.
  */

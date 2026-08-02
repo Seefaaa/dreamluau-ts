@@ -49,11 +49,11 @@ declare module "SS13_base" {
 
     export function check_tick(high_priority?: Byond.Bool): void;
 
-    export function await<F extends MethodsOf<GlobalProcs>>(
+    export function await<F extends MethodsOf<GlobalProcs>, A extends Parameters<GlobalProcs[F]>>(
         thing_to_call: typeof import("SS13").global_proc,
         proc_to_call: F,
-        ...args: GlobalProcs[F] extends (...args: infer U) => any ? U : never
-    ): LuaMultiReturn<[GlobalProcs[F] extends (...args: any[]) => infer R ? R : never, string]>;
+        ...args: A
+    ): LuaMultiReturn<[ReturnsWhen<GlobalProcs[F], A>, string]>;
     export function await<T extends Byond.Datum, F extends MethodsOf<T>>(
         thing_to_call: T,
         proc_to_call: F,

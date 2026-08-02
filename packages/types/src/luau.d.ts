@@ -4,5 +4,8 @@
 /// <reference types="lua-types/special/5.2-only" />
 
 declare namespace debug {
-    function info(level: number, s: "l"): LuaMultiReturn<[number]>;
+    /**
+     * See https://luau.org/library/#debug-library
+     */
+    function info(level: number, s: "l"): number;
 }

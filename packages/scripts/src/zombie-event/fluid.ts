@@ -14,10 +14,10 @@ export function spawnFoam<T extends Byond.Datum.Reagent>(
     foam.reagents.add_reagent(reagnent, volume);
 }
 
-export function foamSpawner<T extends keyof TypePathRegistry>(
+export function foamSpawner<T extends PathsOf<Byond.Datum.Reagent>>(
     fluidGroup: Byond.Datum.FluidGroup,
     color: string,
-    reagnent: T extends keyof TypePathRegistry ? (TypePathRegistry[T] extends Byond.Datum.Reagent ? T : never) : never,
+    reagnent: T,
     volume: number
 ) {
     const reagentType = SS13.type(reagnent);

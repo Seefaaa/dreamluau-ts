@@ -22,13 +22,15 @@ declare namespace SS13 {
         dead_players_by_zlevel: Byond.List<number, Byond.List<number, Byond.Mob>>;
     }
 
+    class SSdcs extends Subsystem {}
+
     class SSspatial_grid extends Subsystem {}
 
     class SSpolling extends Subsystem {
         poll_ghost_candidates(
             question?: string,
             role?: string,
-            check_jobban?: Byond.Bool,
+            check_jobban?: Byond.Bool | boolean,
             poll_time?: number,
             ignore_category?: string,
             flashwindow?: Byond.Bool | boolean,
@@ -36,10 +38,10 @@ declare namespace SS13 {
             jump_target?: Byond.Atom,
             role_name_text?: string,
             custom_response_messages?: Byond.List<number, string> | readonly string[],
-            start_signed_up?: Byond.Bool,
+            start_signed_up?: Byond.Bool | boolean,
             amount_to_pick?: number,
             chat_text_border_icon?: Byond.Icon,
-            announce_chosen?: Byond.Bool
+            announce_chosen?: Byond.Bool | boolean
         ): Byond.List<number, Byond.Mob> | Byond.Mob | undefined;
     }
 }
@@ -86,6 +88,401 @@ declare namespace Byond {
         class ThrownThing extends Byond.Datum {}
 
         class Callback extends Byond.Datum {}
+
+        /**
+         * A weakref holds a non-owning reference to a datum.
+         * The datum can be referenced again using `resolve()`.
+         */
+        class Weakref<T extends Byond.Datum> extends Byond.Datum {
+            reference: string;
+
+            /**
+             * Retrieves the datum that this weakref is referencing.
+             *
+             * This will return `null` if the datum was deleted. This MUST be respected.
+             */
+            resolve(this: Byond.Datum.Weakref<T>): T | undefined;
+        }
+
+        class GasMixture extends Byond.Datum {
+            /**
+             * Associative list of moles for each gas. List key is /datum/gas/<gas_name>, value is amount in moles
+             */
+            moles: Byond.List<Byond.Type, number>;
+            /**
+             * Archived version of moles
+             */
+            moles_archive: Byond.List<Byond.Type, number>;
+            /**
+             * Static list of gas meta data like heat capacity (initialized globally)
+             */
+            gas_meta: Byond.List<number, Byond.List<Byond.Type, unknown>>;
+            /**
+             * The temperature of the gas mix in kelvin. Should never be lower then TCMB
+             */
+            temperature: number;
+            /**
+             * Used, like all archived variables, to ensure turf sharing is consistent inside a tick, no matter
+             * The order of operations
+             */
+            temperature_archived: number;
+            /**
+             * Volume in liters (duh)
+             */
+            volume: number;
+            /**
+             * The last tick this gas mixture shared on. A counter that turfs use to manage activity
+             */
+            last_share: number;
+            /**
+             * Tells us what reactions have happened in our gasmix. Assoc list of reaction - moles reacted pair.
+             */
+            reaction_results: Byond.List<Byond.Type, number>;
+            /**
+             * Whether to call garbage_collect() on the sharer during shares, used for immutable mixtures
+             */
+            get gc_share(): Byond.Bool;
+            set gc_share(value: Byond.Bool | boolean);
+            /**
+             * When this gas mixture was last touched by pipeline processing
+             * I am sorry
+             */
+            pipeline_cycle: number;
+        }
+
+        class Browser extends Byond.Datum {
+            user: Byond.Mob | undefined;
+            title: string;
+            /**
+             * window_id is used as the window name for browse and onclose
+             */
+            window_id: string | undefined;
+            width: number;
+            height: number;
+            source_ref: Byond.Datum.Weakref<Byond.Atom> | undefined;
+            /**
+             * window option is set using window_id
+             */
+            window_options: string;
+            stylesheets: Byond.List<number, string>;
+            scripts: Byond.List<number, string>;
+            head_elements: string | undefined;
+            body_elements: string | undefined;
+            head_content: string;
+            content: string;
+
+            set_content(this: Byond.Datum.Browser, content: string): void;
+
+            open(this: Byond.Datum.Browser, use_on_close?: Byond.Bool | boolean): void;
+        }
+
+        class Job extends Byond.Datum {}
+
+        class SpriteAccessory extends Byond.Datum {}
+
+        namespace SpriteAccessory {
+            class Clothing extends Byond.Datum.SpriteAccessory {}
+        }
+
+        class Outfit extends Byond.Datum {
+            /**
+             * Name of the outfit (shows up in the equip admin verb)
+             */
+            name: string;
+            /**
+             * Type path of item to go in the idcard slot
+             */
+            id: Byond.Type<Byond.Obj.Item.Card.Id> | undefined;
+            /**
+             * Type path of ID card trim associated with this outfit.
+             */
+            id_trim: Byond.Type<Byond.Datum.IdTrim> | undefined;
+            /**
+             * Type path of item to go in uniform slot
+             */
+            uniform: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in suit slot
+             */
+            suit: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in suit storage slot
+             *
+             * (make sure it's valid for that suit)
+             */
+            suit_store: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in back slot
+             */
+            back: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * list of items that should go in the backpack of the user
+             *
+             * Format of this list should be: list(path=count,otherpath=count)
+             */
+            backpack_contents: Byond.List<Byond.Type<Byond.Obj.Item>, number> | undefined;
+            /**
+             * Type path of item to go in belt slot
+             */
+            belt: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * list of items that should go in the belt of the user
+             *
+             * Format of this list should be: list(path=count,otherpath=count)
+             */
+            belt_contents: Byond.List<Byond.Type<Byond.Obj.Item>, number> | undefined;
+            /**
+             * Type path of item to go in ears slot
+             */
+            ears: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in the glasses slot
+             */
+            glasses: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in gloves slot
+             */
+            gloves: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in head slot
+             */
+            head: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in mask slot
+             */
+            mask: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in neck slot
+             */
+            neck: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in shoes slot
+             */
+            shoes: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item for left pocket slot
+             */
+            l_pocket: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item for right pocket slot
+             */
+            r_pocket: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Type path of item to go in the right hand
+             */
+            l_hand: Byond.Type<Byond.Obj.Item> | undefined;
+            r_hand: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Any clothing accessory item
+             */
+            accessory: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * Internals box. Will be inserted at the start of backpack_contents
+             */
+            box: Byond.Type<Byond.Obj.Item> | undefined;
+            /**
+             * extra types for chameleon outfit changes, mostly guns
+             *
+             * Valid values are a single typepath or list of typepaths
+             *
+             * These are all added and returns in the list for get_chamelon_diguise_info proc
+             */
+            chameleon_extras: Byond.Type<Byond.Obj.Item> | Byond.List<number, Byond.Type<Byond.Obj.Item>> | undefined;
+            /**
+             * Any implants the mob should start implanted with
+             *
+             * Format of this list is (typepath, typepath, typepath)
+             */
+            implants: Byond.List<number, Byond.Type<Byond.Obj.Item.Implant>> | undefined;
+            /**
+             * ID of the slot containing a gas tank
+             */
+            internals_slot: Enums.ItemSlot | undefined;
+            /**
+             * Any skillchips the mob should have in their brain.
+             *
+             * Format of this list is (typepath, typepath, typepath)
+             */
+            skillchips: Byond.List<number, Byond.Type<Byond.Obj.Item>> | undefined;
+            /**
+             * Should we preload some of this job's items?
+             */
+            get preload(): Byond.Bool;
+            set preload(value: Byond.Bool | boolean);
+            /**
+             * Any undershirt. While on humans it is a string, here we use paths to stay consistent with the rest of the equips.
+             */
+            undershirt: Byond.Type<Byond.Datum.SpriteAccessory.Clothing> | undefined;
+            underwear: Byond.Type<Byond.Datum.SpriteAccessory.Clothing> | undefined;
+            socks: Byond.Type<Byond.Datum.SpriteAccessory.Clothing> | undefined;
+        }
+
+        namespace Outfit {
+            class Job extends Byond.Datum.Outfit {
+                jobtype: Byond.Type<Byond.Datum.Job> | undefined;
+                backpack: Byond.Type<Byond.Obj.Item.Storage.Backpack>;
+                satchel: Byond.Type<Byond.Obj.Item.Storage.Backpack>;
+                duffelbag: Byond.Type<Byond.Obj.Item.Storage.Backpack>;
+                messenger: Byond.Type<Byond.Obj.Item.Storage.Backpack>;
+                pda_slot: Enums.ItemSlot;
+            }
+
+            namespace Job {
+                class Assistant extends Byond.Datum.Outfit.Job {}
+            }
+        }
+
+        class EffectSystem extends Byond.Datum {
+            /**
+             * Turf on which to spawn the effects
+             */
+            location: Byond.Turf | undefined;
+            /**
+             * Atom that is spawning the particles whose location we're following
+             */
+            holder: Byond.Atom | undefined;
+
+            /**
+             * Instruct the effect system to start following an atom. Can be chained into .start()
+             */
+            attach(this: Byond.Datum.EffectSystem, new_holder: Byond.Atom): Byond.Datum.EffectSystem;
+
+            /**
+             * Start the effect system
+             */
+            start(this: Byond.Datum.EffectSystem): void;
+        }
+
+        namespace EffectSystem {
+            /**
+             * Basic effect system which spawns a certain number of moving effects
+             */
+            class Basic extends Byond.Datum.EffectSystem {
+                /**
+                 * Total number of particles to spawn
+                 */
+                amount: number;
+                /**
+                 * Should we pick among cardinals or all directions when deciding where the particle should move
+                 */
+                get cardinals_only(): Byond.Bool;
+                set cardinals_only(value: Byond.Bool | boolean);
+                /**
+                 * Typepath of the effect to spawn
+                 */
+                effect_type: Byond.Type<Byond.Obj.Effect.ParticleEffect> | undefined;
+                /**
+                 * Total amount of effects we currently have active
+                 */
+                total_effects: number;
+                /**
+                 * Should the system delete itself after finishing?
+                 */
+                get autocleanup(): Byond.Bool;
+                set autocleanup(value: Byond.Bool | boolean);
+                /**
+                 * Should the system delete effects that stop moving?
+                 */
+                get delete_on_stop(): Byond.Bool;
+                set delete_on_stop(value: Byond.Bool | boolean);
+                /**
+                 * How frequently (in deciseconds) should we move our particles?
+                 */
+                step_delay: number;
+                /**
+                 * The length of the previous assigned moveloop in deciseconds
+                 */
+                last_loop_length: number;
+                /**
+                 * List of dirs avalible to pick, used to avoid accidential duplicates
+                 */
+                pickable_dirs: Byond.List<number, Byond.Direction>;
+            }
+
+            namespace Basic {
+                class SparkSpread extends Byond.Datum.EffectSystem.Basic {}
+
+                namespace SparkSpread {
+                    class Quantum extends Byond.Datum.EffectSystem.Basic.SparkSpread {}
+                }
+            }
+        }
+
+        class Component extends Byond.Datum {}
+
+        namespace Component {
+            class Orbiter extends Byond.Datum.Component {}
+        }
+
+        class Language extends Byond.Datum {}
+
+        class LanguageHolder extends Byond.Datum {}
+
+        class Saymode extends Byond.Datum {}
+
+        class MovementPacket extends Byond.Datum {}
+
+        class DriftHandler extends Byond.Datum {}
+
+        class BankAccount extends Byond.Datum {}
+
+        class IdTrim extends Byond.Datum {}
+
+        class PodStyle extends Byond.Datum {
+            /**
+             * Name that pods of this style will be named by default
+             */
+            name: string;
+
+            /**
+             * Name that is displayed to admins in pod config panel
+             */
+            ui_name: string;
+
+            /**
+             * Description assigned to droppods of this style
+             */
+            desc: string;
+
+            /**
+             * Determines if this pod can use animations/masking/overlays
+             */
+            shape: number;
+
+            /**
+             * Base icon state assigned to this pod
+             */
+            icon_state: string;
+
+            /**
+             * Whenever this pod should have a door overlay added to it. Uses [icon_state]_door sprite
+             */
+            has_door: Byond.Bool;
+
+            /**
+             * Decals added to this pod, if any
+             */
+            decal_icon: string;
+
+            /**
+             * Color that this pod glows when landing
+             */
+            glow_color: string;
+
+            /**
+             * Type of rubble that this pod creates upon landing
+             */
+            rubble_type: number;
+
+            /**
+             * ID for TGUI data
+             */
+            id: string;
+        }
+
+        namespace PodStyle {
+            class Centcom extends Byond.Datum.PodStyle {}
+        }
 
         class Reagent extends Byond.Datum {
             /**
@@ -774,6 +1171,12 @@ declare namespace Byond {
             namespace Carbon {
                 class Human extends Byond.Mob.Living.Carbon {
                     physiology: Byond.Datum.Physiology;
+
+                    equipOutfit(
+                        this: Byond.Mob.Living.Carbon.Human,
+                        outfit: Byond.Datum.Outfit | Byond.Type<Byond.Datum.Outfit>,
+                        visuals_only?: Byond.Bool | boolean
+                    ): Byond.Bool;
                 }
             }
         }
@@ -794,11 +1197,11 @@ declare namespace Byond {
         reagents: Byond.Datum.Reagents | undefined;
 
         /**
-         * This displaces the object’s icon vertically by the specified number of pixels. This is meant to be used in situations where world.map_format is used to display something other than a top-down form, for instance in an isometric or side-view display. In a top-down mode pixel_z behaves the same as pixel_y, except that it does not rotate with changes to client.dir.
-         *
-         * This effect is purely visual and does not influence such things as movement bumping or view() range calculations.
+         * Used for changing icon states for different base sprites.
          */
-        pixel_z: number;
+        base_icon_state: string | undefined;
+
+        resistance_flags: Bitflags.Resistance;
 
         /**
          * Helper for logging chat messages or other logs with arbitrary inputs (e.g. announcements)
@@ -838,17 +1241,334 @@ declare namespace Byond {
          * Not recommended to use, listen for the [COMSIG_ATOM_DIR_CHANGE] signal instead (sent by this proc)
          */
         setDir(this: Byond.Atom, new_dir: Byond.Direction): void;
+
+        /**
+         * Updates the appearence of the icon
+         *
+         * Mostly delegates to update_name, update_desc, and update_icon
+         *
+         * Arguments:
+         * - updates: A set of bitflags dictating what should be updated. Defaults to [ALL]
+         */
+        update_appearance(this: Byond.Atom, updates?: Bitflags.Update): Bitflags.Update;
     }
 
     namespace Atom {
         interface Movable {
-            /** The list of factions this atom belongs to (used for cacheable faction strings - these tend to not change very often) */
-            faction: Byond.List<number, string> | undefined;
+            last_move: Byond.Direction | undefined;
+
+            get anchored(): Byond.Bool;
+            set anchored(value: Byond.Bool | boolean);
+
+            move_resist: number;
+
+            move_force: number;
+
+            pull_force: number;
+
+            throwing: Byond.Datum.ThrownThing | undefined;
+
+            /**
+             * How many tiles to move per ds when being thrown. Float values are fully supported
+             */
+            throw_speed: number;
+
+            throw_range: number;
+
+            /**
+             * Max range this atom can be thrown via telekinesis
+             */
+            tk_throw_range: number;
+
+            pulledby: Byond.Mob | undefined;
+
+            /**
+             * What language holder type to init as
+             */
+            initial_language_holder: Byond.Type<Byond.Datum.LanguageHolder>;
+
+            /**
+             * The list of allies this atom has (used for anything too dynamic for string_list() - typically mob refs, each mob starts with themselves as an ally)
+             */
+            allies: Byond.List<number, string> | undefined;
+
+            /**
+             * Use get_default_say_verb() in say.dm instead of reading verb_say.
+             */
+            verb_say: string;
+
+            verb_ask: string;
+
+            verb_exclaim: string;
+
+            verb_whisper: string;
+
+            verb_sing: string;
+
+            verb_yell: string;
+
+            speech_span: string | undefined;
+
+            /**
+             * Are we moving with inertia? Mostly used as an optimization
+             */
+            get inertia_moving(): Byond.Bool;
+            set inertia_moving(value: Byond.Bool | boolean);
+
+            /**
+             * Multiplies speed the movable drifts when unaffected by gravity.
+             * "Passive" is used for referring "base drift speed" - only the smaller of the two are used.
+             */
+            inertia_move_multiplier_passive: number;
+
+            /**
+             * Multiplies speed the movable drifts when unaffected by gravity.
+             * "Active" is used for referring to things boosting our drift speed, like jetpacks - only the smaller of the two are used.
+             */
+            inertia_move_multiplier_active: number;
+
+            /**
+             * Object "weight", higher weight reduces acceleration applied to the object
+             */
+            inertia_force_weight: number;
+
+            /**
+             * The last time we pushed off something
+             * This is a hack to get around dumb him him me scenarios
+             */
+            last_pushoff: number | undefined;
+
+            /**
+             * Things we can pass through while moving. If any of this matches the thing we're trying to pass's [pass_flags_self], then we can pass through.
+             */
+            pass_flags: Bitflags.Pass;
+
+            /**
+             * If false makes [CanPass][/atom/proc/CanPass] call [CanPassThrough][/atom/movable/proc/CanPassThrough] on this type instead of using default behaviour
+             */
+            get generic_canpass(): Byond.Bool;
+            set generic_canpass(value: Byond.Bool | boolean);
+
+            /**
+             * 0: not doing a diagonal move. 1 and 2: doing the first/second step of the diagonal move
+             */
+            moving_diagonally: Enums.DiagonalStep;
+
+            /**
+             * attempt to resume grab after moving instead of before.
+             */
+            moving_from_pull: Byond.Atom.Movable | undefined;
+
+            /**
+             * Holds information about any movement loops currently running/waiting to run on the movable. Lazy, will be null if nothing's going on
+             */
+            move_packet: Byond.Datum.MovementPacket | undefined;
+
+            /**
+             * an associative lazylist of relevant nested contents by "channel", the list is of the form: list(channel = list(important nested contents of that type))
+             * each channel has a specific purpose and is meant to replace potentially expensive nested contents iteration.
+             * do NOT add channels to this for little reason as it can add considerable memory usage.
+             */
+            important_recursive_contents: Byond.List<string, Byond.List<number, Byond.Atom.Movable>> | undefined;
+
+            /**
+             * contains every client mob corresponding to every client eye in this container. lazily updated by SSparallax and is sparse:
+             * only the last container of a client eye has this list assuming no movement since SSparallax's last fire
+             */
+            client_mobs_in_contents: Byond.List<number, Byond.Mob> | undefined;
+
+            /**
+             * String representing the spatial grid groups we want to be held in.
+             * acts as a key to the list of spatial grid contents types we exist in via SSspatial_grid.spatial_grid_categories.
+             * We do it like this to prevent people trying to mutate them and to save memory on holding the lists ourselves
+             */
+            spatial_grid_key: string | undefined;
+
+            /**
+             * In case you have multiple types, you automatically use the most useful one.
+             * IE: Skating on ice, flippers on water, flying over chasm/space, etc.
+             * I recommend you use the movetype_handler system and not modify this directly, especially for living mobs.
+             */
+            movement_type: Bitflags.MovementType;
+
+            pulling: Byond.Atom.Movable | undefined;
+
+            grab_state: Enums.GrabLevel;
+
+            /**
+             * The strongest grab we can acomplish
+             */
+            max_grab: Enums.GrabLevel;
+
+            throwforce: number;
+
+            orbiting: Byond.Datum.Component.Orbiter | undefined;
+
+            /**
+             * is the mob currently ascending or descending through z levels?
+             */
+            currently_z_moving: Enums.CurrentlyZMoving | undefined;
+
+            /**
+             * Either [EMISSIVE_BLOCK_NONE], [EMISSIVE_BLOCK_GENERIC], or [EMISSIVE_BLOCK_UNIQUE]
+             */
+            blocks_emissive: Enums.EmissiveBlock;
+
+            /**
+             * Internal holder for emissive blocker object, do not use directly use blocks_emissive
+             */
+            em_block: Byond.Atom.Movable.RenderStep.EmissiveBlocker | undefined;
+
+            /**
+             * Lazylist to keep track on the sources of illumination.
+             */
+            affected_dynamic_lights: Byond.List<Byond.Datum, number> | undefined;
+
+            /**
+             * Highest-intensity light affecting us, which determines our visibility.
+             */
+            affecting_dynamic_lumi: number;
+
+            /**
+             * Whether this atom should have its dir automatically changed when it moves. Setting this to FALSE allows for things such as directional windows to retain dir on moving without snowflake code all of the place.
+             */
+            get set_dir_on_move(): Byond.Bool;
+            set set_dir_on_move(value: Byond.Bool | boolean);
+
+            /**
+             * The degree of thermal insulation that mobs in list/contents have from the external environment, between 0 and 1
+             */
+            contents_thermal_insulation: number;
+
+            /**
+             * The degree of pressure protection that mobs in list/contents have from the external environment, between 0 and 1
+             */
+            contents_pressure_protection: number;
 
             /**
              * The voice that this movable makes when speaking
              */
             voice: string | undefined;
+
+            /**
+             * The pitch adjustment that this movable uses when speaking.
+             */
+            pitch: number;
+
+            /**
+             * The base set of blips to use for blip calculation.
+             */
+            blip_base: string;
+
+            /**
+             * The blip variant to use for blip calculation.
+             */
+            blip_number: string;
+
+            /**
+             * Datum that keeps all data related to zero-g drifting and handles related code/comsigs
+             */
+            drift_handler: Byond.Datum.DriftHandler | undefined;
+
+            /**
+             * The filter to apply to the voice when processing the TTS audio message.
+             */
+            voice_filter: string;
+
+            /**
+             * Set to anything other than "" to activate the silicon voice effect for TTS messages.
+             */
+            tts_silicon_voice_effect: string;
+
+            /**
+             * Value used to increment ex_act() if reactionary_explosions is on
+             * How much we as a source block explosions by
+             * Will not automatically apply to the turf below you, you need to apply /datum/element/block_explosives in conjunction with this
+             */
+            explosion_block: number;
+
+            /**
+             * List of accesses needed to use this object: The user must possess all accesses in this list in order to use the object.
+             * Example: If req_access = list(ACCESS_ENGINE, ACCESS_CE)- then the user must have both ACCESS_ENGINE and ACCESS_CE in order to use the object.
+             */
+            req_access: Byond.List<number, string> | undefined;
+
+            /**
+             * List of accesses needed to use this object: The user must possess at least one access in this list in order to use the object.
+             * Example: If req_one_access = list(ACCESS_ENGINE, ACCESS_CE)- then the user must have either ACCESS_ENGINE or ACCESS_CE in order to use the object.
+             */
+            req_one_access: Byond.List<number, string> | undefined;
+
+            /**
+             * Returns the faction list of this atom/movable
+             */
+            get_faction(this: Byond.Atom.Movable): Byond.List<number, string> | undefined;
+
+            /**
+             * Sets atom's faction list to be the provided list of faction strings. Returns TRUE if successful.
+             */
+            set_faction(
+                this: Byond.Atom.Movable,
+                factions: Byond.List<number, string> | readonly string[] | undefined
+            ): Byond.Bool;
+
+            /**
+             * Adds a single faction string or list of faction strings to the atom's faction list. Returns TRUE if something was added.
+             */
+            add_faction(
+                this: Byond.Atom.Movable,
+                faction_or_factions: string | Byond.List<number, string> | readonly string[]
+            ): Byond.Bool;
+
+            /**
+             * Removes a single faction string or list of faction strings from the atom's faction list. Returns TRUE if something was removed.
+             */
+            remove_faction(
+                this: Byond.Atom.Movable,
+                faction_or_factions: string | Byond.List<number, string> | readonly string[]
+            ): Byond.Bool;
+
+            /**
+             * Returns TRUE if the faction or factions in list are in our faction list.
+             * If match_all is set, we have to match everything in the provided list arg.
+             */
+            has_faction(
+                this: Byond.Atom.Movable,
+                faction_or_factions: string | Byond.List<number, string> | readonly string[],
+                match_all?: Byond.Bool | boolean
+            ): Byond.Bool;
+
+            /**
+             * What makes things... talk.
+             *
+             * * message - The message to say.
+             * * bubble_type - The type of speech bubble to use when talking
+             * * spans - A list of spans to attach to the message. Includes the atom's speech span by default
+             * * sanitize - Should we sanitize the message? Only set to FALSE if you have ALREADY sanitized it
+             * * language - The language to speak in. Defaults to the atom's selected language
+             * * ignore_spam - Should we ignore spam checks?
+             * * forced - What was it forced by? null if voluntary. (NOT a boolean!)
+             * * filterproof - Do we bypass the filter when checking the message?
+             * * message_range - The range of the message. Defaults to 7
+             * * saymode - Saymode passed to the speech
+             * This is usually set automatically and is only relevant for living mobs.
+             * * message_mods - A list of message modifiers, i.e. whispering/singing.
+             * Most of these are set automatically but you can pass in your own pre-say.
+             */
+            say(
+                this: Byond.Atom.Movable,
+                message: string,
+                bubble_type?: string,
+                spans?: Byond.List<number, string> | readonly string[],
+                sanitize?: Byond.Bool | boolean,
+                language?: Byond.Datum.Language,
+                ignore_spam?: Byond.Bool | boolean,
+                forced?: string,
+                filterproof?: Byond.Bool | boolean,
+                message_range?: number,
+                saymode?: Byond.Datum.Saymode,
+                message_mods?: Byond.List<string, string>
+            ): void;
 
             /**
              * This proc is used to generate the 'message' part of a chat message.
@@ -884,6 +1604,14 @@ declare namespace Byond {
                 glide_size_override?: number,
                 update_dir?: Byond.Bool | boolean
             ): Byond.Bool | undefined;
+        }
+
+        namespace Movable {
+            class RenderStep extends Byond.Atom.Movable {}
+
+            namespace RenderStep {
+                class EmissiveBlocker extends Byond.Atom.Movable.RenderStep {}
+            }
         }
     }
 
@@ -942,6 +1670,205 @@ declare namespace Byond {
                     class Hook extends Byond.Obj.Item.AmmoCasing.Magic {}
                 }
             }
+
+            class Implanter extends Byond.Obj.Item {
+                /**
+                 * The implant currently loaded in the implanter.
+                 */
+                imp: Byond.Obj.Item.Implant | undefined;
+            }
+
+            class Implant extends Byond.Obj.Item {
+                /**
+                 * The mob that's implanted with this.
+                 */
+                imp_in: Byond.Mob.Living | undefined;
+                /**
+                 * If false, upon implantation of a duplicate implant, an attempt to combine the new implant's uses with the old one's uses will be made.
+                 */
+                get allow_multiple(): Byond.Bool;
+                set allow_multiple(value: Byond.Bool | boolean);
+                /**
+                 * How many times this can do something. -1 for unlimited.
+                 */
+                uses: number;
+                /**
+                 * Our implant flags.
+                 */
+                implant_flags: number;
+                /**
+                 * Implant color, used for selecting either the "b" version or the "r" version of the implant case sprite.
+                 */
+                implant_color: string;
+                /**
+                 * what icon state will we represent ourselves with on the hud?
+                 */
+                hud_icon_state: string | undefined;
+                /**
+                 * What's the most important info that we really, really care about, e.g. name, lifespan-after-death, utility?
+                 */
+                implant_info: string;
+                /**
+                 * What's the extended lore for this implant that we might not care that much about, e.g. descriptions, flavortext?
+                 */
+                implant_lore: string;
+
+                activate(this: Byond.Obj.Item.Implant): void;
+
+                /**
+                 * What does the implant do upon injection?
+                 *
+                 * return true if the implant injects
+                 * return false if there is no room for implant / it fails
+                 * Arguments:
+                 * * mob/living/target - mob being implanted
+                 * * mob/user - mob doing the implanting
+                 * * silent - unused here
+                 * * force - if true, implantation will not fail if can_be_implanted_in returns false
+                 */
+                implant(
+                    this: Byond.Obj.Item.Implant,
+                    target: Byond.Mob.Living,
+                    user: Byond.Mob,
+                    silent?: Byond.Bool | boolean,
+                    force?: Byond.Bool | boolean
+                ): Byond.Bool | undefined;
+            }
+
+            class Gun extends Byond.Obj.Item {}
+
+            namespace Gun {
+                class Energy extends Byond.Obj.Item.Gun {}
+
+                namespace Energy {
+                    class Laser extends Byond.Obj.Item.Gun.Energy {}
+                }
+            }
+
+            class Storage extends Byond.Obj.Item {}
+
+            namespace Storage {
+                class Backpack extends Byond.Obj.Item.Storage {}
+
+                class Medkit extends Byond.Obj.Item.Storage {}
+
+                namespace Medkit {
+                    class TacticalLite extends Byond.Obj.Item.Storage.Medkit {}
+                }
+            }
+
+            class Defibrillator extends Byond.Obj.Item {}
+
+            namespace Defibrillator {
+                class Compact extends Byond.Obj.Item.Defibrillator {}
+
+                namespace Compact {
+                    class Loaded extends Byond.Obj.Item.Defibrillator.Compact {}
+                }
+            }
+
+            class Card extends Byond.Obj.Item {
+                /**
+                 * Cached icon that has been built for this card. Intended to be displayed in chat. Cardboards IDs and actual IDs use it.
+                 */
+                cached_flat_icon: Byond.Icon | undefined;
+                /**
+                 * What is our honorific name/title combo to be displayed?
+                 */
+                honorific_title: string | undefined;
+            }
+
+            namespace Card {
+                class Id extends Byond.Obj.Item.Card {
+                    /**
+                     * The name registered on the card (for example: Dr Bryan See)
+                     */
+                    registered_name: string | undefined;
+                    /**
+                     * Linked bank account.
+                     */
+                    registered_account: Byond.Datum.BankAccount | undefined;
+                    /**
+                     * Linked holopay.
+                     */
+                    my_store: Byond.Obj.Structure.Holopay | undefined;
+                    /**
+                     * Cooldown between projecting holopays
+                     */
+                    last_holopay_projection: number;
+                    /**
+                     * List of logos available for holopay customization - via font awesome 5
+                     */
+                    available_logos: Byond.List<number, string>;
+                    /**
+                     * Replaces the "pay whatever" functionality with a set amount when non-zero.
+                     */
+                    holopay_fee: number;
+                    /**
+                     * The holopay icon chosen by the user
+                     */
+                    holopay_logo: string;
+                    /**
+                     * Maximum forced fee. It's unlikely for a user to encounter this type of money, much less pay it willingly.
+                     */
+                    holopay_max_fee: number;
+                    /**
+                     * Minimum forced fee for holopay stations. Registers as "pay what you want."
+                     */
+                    holopay_min_fee: number;
+                    /**
+                     * The holopay name chosen by the user
+                     */
+                    holopay_name: string;
+                    /**
+                     * Registered owner's age.
+                     */
+                    registered_age: number;
+                    /**
+                     * The job name registered on the card (for example: Assistant).
+                     */
+                    assignment: string | undefined;
+                    /**
+                     * Trim datum associated with the card. Controls which job icon is displayed on the card and which accesses do not require wildcards.
+                     */
+                    trim: Byond.Type<Byond.Datum.IdTrim> | undefined;
+                    /**
+                     * Whether the trim on this card can be changed.
+                     */
+                    get trim_changeable(): Byond.Bool;
+                    set trim_changeable(value: Byond.Bool | boolean);
+                    /**
+                     * Access levels held by this card.
+                     */
+                    access: Byond.List<number, string>;
+                    /**
+                     * List of wildcard slot names as keys with lists of wildcard data as values.
+                     */
+                    wildcard_slots: Byond.List<string, Byond.List<string, unknown>>;
+                    /**
+                     * Boolean value. If TRUE, the [Intern] tag gets prepended to this ID card when the label is updated.
+                     */
+                    get is_intern(): Byond.Bool;
+                    set is_intern(value: Byond.Bool | boolean);
+                    /**
+                     * If true, the wearer will have bigger arrow when pointing at things. Passed down by trims.
+                     */
+                    get big_pointer(): Byond.Bool;
+                    set big_pointer(value: Byond.Bool | boolean);
+                    /**
+                     * If set, the arrow will have a different color.
+                     */
+                    pointer_color: string | undefined;
+                    /**
+                     * Will this ID card use the first or last name as the name displayed with the honorific?
+                     */
+                    honorific_position: Enums.HonorificPosition;
+                    /**
+                     * What is our selected honorific?
+                     */
+                    chosen_honorific: string | undefined;
+                }
+            }
         }
 
         class Projectile extends Byond.Obj {}
@@ -949,6 +1876,15 @@ declare namespace Byond {
         class Effect extends Byond.Obj {}
 
         namespace Effect {
+            class Overlay extends Byond.Obj.Effect {}
+
+            namespace Overlay {
+                /**
+                 * Door overlay for animating closets
+                 */
+                class ClosetDoor extends Byond.Obj.Effect.Overlay {}
+            }
+
             class ParticleEffect extends Byond.Obj {}
 
             namespace ParticleEffect {
@@ -966,7 +1902,10 @@ declare namespace Byond {
             }
         }
 
-        class Structure extends Byond.Obj {}
+        class Structure extends Byond.Obj {
+            get broken(): Byond.Bool;
+            set broken(value: Byond.Bool | boolean);
+        }
 
         namespace Structure {
             class Barricade extends Byond.Obj.Structure {}
@@ -980,6 +1919,296 @@ declare namespace Byond {
             }
 
             class Window extends Byond.Obj.Structure {}
+
+            /**
+             * A lavaland geyser that spawns chems and can be mining scanned for points. Made to work with the plumbing pump to extract that sweet rare nectar
+             */
+            class Geyser extends Byond.Obj.Structure {
+                /**
+                 * set to null to get it greyscaled from "[icon_state]_soup". Not very usable with the whole random thing, but more types can be added if you change the spawn prob
+                 */
+                erupting_state: string | undefined;
+                /**
+                 * what chem do we produce?
+                 */
+                reagent_id: Byond.Type<Byond.Datum.Reagent>;
+                /**
+                 * how much reagents we add every process (2 seconds)
+                 */
+                potency: number;
+                /**
+                 * maximum volume
+                 */
+                max_volume: number;
+                /**
+                 * Have we been discovered with a mining scanner?
+                 */
+                get discovered(): Byond.Bool;
+                set discovered(value: Byond.Bool | boolean);
+                /**
+                 * How many points we grant to whoever discovers us
+                 */
+                point_value: number;
+                /**
+                 * what's our real name that will show upon discovery? null to do nothing
+                 */
+                true_name: string | undefined;
+                /**
+                 * the message given when you discover this geyser.
+                 */
+                discovery_message: string | undefined;
+            }
+
+            class Holopay extends Byond.Obj.Structure {
+                /**
+                 * ID linked to the holopay
+                 */
+                linked_card: Byond.Obj.Item.Card.Id | undefined;
+                /**
+                 * Max range at which the hologram can be projected before it deletes
+                 */
+                max_holo_range: number;
+                /**
+                 * The holopay shop icon displayed in the UI
+                 */
+                shop_logo: string;
+                /**
+                 * Replaces the "pay whatever" functionality with a set amount when non-zero.
+                 */
+                force_fee: number;
+            }
+
+            class Closet extends Byond.Obj.Structure {
+                /**
+                 * The overlay for the closet's door
+                 */
+                door_obj: Byond.Obj.Effect.Overlay.ClosetDoor | undefined;
+                /**
+                 * Whether or not this door is being animated
+                 */
+                get is_animating_door(): Byond.Bool;
+                set is_animating_door(value: Byond.Bool | boolean);
+                /**
+                 * Vertical squish of the door
+                 */
+                door_anim_squish: number;
+                /**
+                 * The maximum angle the door will be drawn at
+                 */
+                door_anim_angle: number;
+                /**
+                 * X position of the closet door hinge, relative to the center of the sprite
+                 */
+                door_hinge_x: number;
+                /**
+                 * Amount of time it takes for the door animation to play
+                 *
+                 * set to 0 to make the door not animate at all
+                 */
+                door_anim_time: number;
+                /**
+                 * Paint jobs for this closet, crates are a subtype of closet so they override these values
+                 */
+                paint_jobs: Byond.List<string, Byond.List<string, string>> | Byond.Bool | undefined;
+                /**
+                 * Controls whether a door overlay should be applied using the icon_door value as the icon state
+                 */
+                get enable_door_overlay(): Byond.Bool;
+                set enable_door_overlay(value: Byond.Bool | boolean);
+                get has_opened_overlay(): Byond.Bool;
+                set has_opened_overlay(value: Byond.Bool | boolean);
+                get has_closed_overlay(): Byond.Bool;
+                set has_closed_overlay(value: Byond.Bool | boolean);
+                icon_door: string | undefined;
+                get opened(): Byond.Bool;
+                set opened(value: Byond.Bool | boolean);
+                get welded(): Byond.Bool;
+                set welded(value: Byond.Bool | boolean);
+                get locked(): Byond.Bool;
+                set locked(value: Byond.Bool | boolean);
+                /**
+                 * never solid (You can always pass over it)
+                 */
+                get wall_mounted(): Byond.Bool;
+                set wall_mounted(value: Byond.Bool | boolean);
+                breakout_time: number;
+                message_cooldown: number | undefined;
+                get can_weld_shut(): Byond.Bool;
+                set can_weld_shut(value: Byond.Bool | boolean);
+                get horizontal(): Byond.Bool;
+                set horizontal(value: Byond.Bool | boolean);
+                get allow_objects(): Byond.Bool;
+                set allow_objects(value: Byond.Bool | boolean);
+                get allow_dense(): Byond.Bool;
+                set allow_dense(value: Byond.Bool | boolean);
+                /**
+                 * if it's dense when open or not
+                 */
+                get dense_when_open(): Byond.Bool;
+                set dense_when_open(value: Byond.Bool | boolean);
+                /**
+                 * Biggest mob_size accepted by the container
+                 */
+                max_mob_size: Enums.MobSize;
+                /**
+                 * how many human sized mob/living can fit together inside a closet.
+                 */
+                mob_storage_capacity: number;
+                /**
+                 * This is so that someone can't pack hundreds of items in a locker/crate then open it in a populated area to crash clients.
+                 */
+                storage_capacity: number;
+                cutting_tool: Byond.Type<Byond.Obj.Item>;
+                open_sound: Byond.Sound;
+                close_sound: Byond.Sound;
+                lock_sound: Byond.Sound;
+                unlock_sound: Byond.Sound;
+                open_sound_volume: number;
+                close_sound_volume: number;
+                material_drop: Byond.Type<Byond.Obj.Item>;
+                material_drop_amount: number;
+                /**
+                 * which icon to use when packagewrapped. null to be unwrappable.
+                 */
+                delivery_icon: string | undefined;
+                get anchorable(): Byond.Bool;
+                set anchorable(value: Byond.Bool | boolean);
+                icon_welded: string;
+                icon_broken: string;
+                /**
+                 * Whether a skittish person can dive inside this closet. Disable if opening the closet causes "bad things" to happen or that it leads to a logical inconsistency.
+                 */
+                get divable(): Byond.Bool;
+                set divable(value: Byond.Bool | boolean);
+                /**
+                 * secure locker or not, also used if overriding a non-secure locker with a secure door overlay to add fancy lights
+                 */
+                get secure(): Byond.Bool;
+                set secure(value: Byond.Bool | boolean);
+                get can_install_electronics(): Byond.Bool;
+                set can_install_electronics(value: Byond.Bool | boolean);
+                get is_maploaded(): Byond.Bool;
+                set is_maploaded(value: Byond.Bool | boolean);
+                get contents_initialized(): Byond.Bool;
+                set contents_initialized(value: Byond.Bool | boolean);
+                /**
+                 * is this closet locked by an exclusive id, i.e. your own personal locker
+                 */
+                id_card: Byond.Datum.Weakref<Byond.Obj.Item.Card.Id> | undefined;
+                /**
+                 * should we prevent further access change
+                 */
+                get access_locked(): Byond.Bool;
+                set access_locked(value: Byond.Bool | boolean);
+                /**
+                 * is the card reader installed in this machine
+                 */
+                get card_reader_installed(): Byond.Bool;
+                set card_reader_installed(value: Byond.Bool | boolean);
+                /**
+                 * access types for card reader
+                 */
+                access_choices: Byond.List<number, string>;
+                /**
+                 * Whether this closet is sealed or not. If sealed, it'll have its own internal air
+                 */
+                get sealed(): Byond.Bool;
+                set sealed(value: Byond.Bool | boolean);
+                /**
+                 * Internal gas for this closet.
+                 */
+                internal_air: Byond.Datum.GasMixture | undefined;
+                /**
+                 * Volume of the internal air
+                 */
+                air_volume: number;
+                /**
+                 * How many pixels the closet can shift on the x axis when shaking
+                 */
+                x_shake_pixel_shift: number;
+                /**
+                 * how many pixels the closet can shift on the y axes when shaking
+                 */
+                y_shake_pixel_shift: number;
+
+                open(
+                    this: Byond.Obj.Structure.Closet,
+                    user?: Byond.Mob.Living,
+                    force?: Byond.Bool | boolean,
+                    special_effects?: Byond.Bool | boolean
+                ): Byond.Bool;
+
+                close(this: Byond.Obj.Structure.Closet, user?: Byond.Mob.Living): Byond.Bool;
+
+                /**
+                 * Toggles a closet open or closed, to the opposite state. Does not respect locked or welded states, however.
+                 */
+                toggle(this: Byond.Obj.Structure.Closet, user?: Byond.Mob.Living): Byond.Bool;
+
+                can_open(
+                    this: Byond.Obj.Structure.Closet,
+                    user?: Byond.Mob.Living,
+                    force?: Byond.Bool | boolean
+                ): Byond.Bool;
+
+                can_close(this: Byond.Obj.Structure.Closet, user?: Byond.Mob.Living): Byond.Bool;
+
+                insert(
+                    this: Byond.Obj.Structure.Closet,
+                    inserted: Byond.Atom.Movable,
+                    mapload?: Byond.Bool | boolean
+                ): Byond.Bool | -1;
+
+                insertion_allowed(this: Byond.Obj.Structure.Closet, movable: Byond.Atom.Movable): Byond.Bool;
+
+                take_contents(this: Byond.Obj.Structure.Closet, mapload?: Byond.Bool | boolean): void;
+
+                /**
+                 * toggles the lock state of a closet
+                 */
+                lock(this: Byond.Obj.Structure.Closet): void;
+
+                /**
+                 * unlocks the closet
+                 */
+                unlock(this: Byond.Obj.Structure.Closet): void;
+
+                togglelock(
+                    this: Byond.Obj.Structure.Closet,
+                    user?: Byond.Mob.Living,
+                    silent?: Byond.Bool | boolean
+                ): Byond.Bool;
+
+                bust_open(this: Byond.Obj.Structure.Closet): void;
+
+                set_access(
+                    this: Byond.Obj.Structure.Closet,
+                    accesses: Byond.List<number, string> | readonly string[]
+                ): void;
+            }
+
+            namespace Closet {
+                class Crate extends Byond.Obj.Structure.Closet {}
+
+                namespace Crate {
+                    class Secure extends Byond.Obj.Structure.Closet.Crate {}
+
+                    namespace Secure {
+                        /**
+                         * for consistency with other "freezer" closets/crates
+                         */
+                        class Freezer extends Byond.Obj.Structure.Closet.Crate.Secure {}
+
+                        class Gear extends Byond.Obj.Structure.Closet.Crate.Secure {}
+                    }
+                }
+
+                class Supplypod extends Byond.Obj.Structure.Closet {}
+
+                namespace Supplypod {
+                    class Podspawn extends Byond.Obj.Structure.Closet.Supplypod {}
+                }
+            }
         }
     }
 
@@ -993,6 +2222,125 @@ declare namespace Byond {
 
 declare namespace Bitflags {
     type SeeInvisibleObserver = 60;
+
+    /**
+     * These defines are used specifically with the atom/pass_flags bitmask
+     * the atom/checkpass() proc uses them (tables will call movable atom checkpass(PASSTABLE) for example)
+     */
+    namespace Pass {
+        /** Allows you to pass over tables. */
+        type Table = 1;
+        /** Allows you to pass over glass(this generally includes anything see-through that's glass-adjacent, ie. windows, windoors, airlocks with glass, etc.) */
+        type Glass = 2;
+        /** Allows you to pass over grilles. */
+        type Grille = 4;
+        /** Allows you to pass over blob tiles. */
+        type Blob = 8;
+        /** Allows you to pass over mobs. */
+        type Mob = 16;
+        /** Allows you to pass over closed turfs, ie. walls. */
+        type ClosedTurf = 32;
+        /** Let thrown things past us. **ONLY MEANINGFUL ON pass_flags_self!** */
+        type LetPassThrow = 64;
+        /** Allows you to pass over machinery, ie. vending machines, computers, protolathes, etc. */
+        type Machine = 128;
+        /** Allows you to pass over structures, ie. racks, tables(if you don't already have PASSTABLE), etc. */
+        type Structure = 256;
+        /** Allows you to pass over plastic flaps, often found at cargo or MULE dropoffs. */
+        type Flaps = 512;
+        /** Allows you to pass over airlocks and mineral doors. */
+        type Doors = 1024;
+        /** Allows you to pass over vehicles, ie. mecha, secways, the pimpin' ride, etc. */
+        type Vehicle = 2048;
+        /** Allows you to pass over dense items. */
+        type Item = 4096;
+        /** Do not intercept click attempts during Adjacent() checks. See [turf/proc/ClickCross]. **ONLY MEANINGFUL ON pass_flags_self!** */
+        type LetPassClicks = 8192;
+        /** Allows you to pass over windows and window-adjacent stuff, like windows and windoors. Does not include airlocks with glass in them. */
+        type Window = 16384;
+    }
+
+    type Pass = Bitflag<
+        [
+            Bitflags.Pass.Table,
+            Bitflags.Pass.Glass,
+            Bitflags.Pass.Grille,
+            Bitflags.Pass.Blob,
+            Bitflags.Pass.Mob,
+            Bitflags.Pass.ClosedTurf,
+            Bitflags.Pass.LetPassThrow,
+            Bitflags.Pass.Machine,
+            Bitflags.Pass.Structure,
+            Bitflags.Pass.Flaps,
+            Bitflags.Pass.Doors,
+            Bitflags.Pass.Vehicle,
+            Bitflags.Pass.Item,
+            Bitflags.Pass.LetPassClicks,
+            Bitflags.Pass.Window,
+        ]
+    >;
+
+    /**
+     * Fire and Acid stuff, for resistance_flags
+     */
+    namespace Resistance {
+        type LavaProof = 1;
+        /** 100% immune to fire damage (but not necessarily to lava or heat) */
+        type FireProof = 2;
+        /** atom is flammable and can have the burning component */
+        type Flammable = 4;
+        /** currently burning */
+        type OnFire = 8;
+        /** acid can't even appear on it, let alone melt it. */
+        type Unacidable = 16;
+        /** acid stuck on it doesn't melt it. */
+        type AcidProof = 32;
+        /** doesn't take damage */
+        type Indestructible = 64;
+        /** can't be frozen */
+        type FreezeProof = 128;
+        /** can't be shuttle crushed. */
+        type ShuttleCrushProof = 256;
+        /** can't be destroyed by bombs */
+        type BombProof = 512;
+    }
+
+    type Resistance = Bitflag<
+        [
+            Bitflags.Resistance.LavaProof,
+            Bitflags.Resistance.FireProof,
+            Bitflags.Resistance.Flammable,
+            Bitflags.Resistance.OnFire,
+            Bitflags.Resistance.Unacidable,
+            Bitflags.Resistance.AcidProof,
+            Bitflags.Resistance.Indestructible,
+            Bitflags.Resistance.FreezeProof,
+            Bitflags.Resistance.ShuttleCrushProof,
+            Bitflags.Resistance.BombProof,
+        ]
+    >;
+
+    namespace MovementType {
+        type Ground = 1;
+        type Flying = 2;
+        type Ventcrawling = 4;
+        type Floating = 8;
+        /** When moving, will Cross() everything, but won't stop or Bump() anything. */
+        type Phasing = 16;
+        /** The mob is walking on the ceiling. Or is generally just, upside down. */
+        type UpsideDown = 32;
+    }
+
+    type MovementType = Bitflag<
+        [
+            Bitflags.MovementType.Ground,
+            Bitflags.MovementType.Flying,
+            Bitflags.MovementType.Ventcrawling,
+            Bitflags.MovementType.Floating,
+            Bitflags.MovementType.Phasing,
+            Bitflags.MovementType.UpsideDown,
+        ]
+    >;
 
     // type ReagentMethodTouch = 1;
     // type ReagentMethodIngest = 2;
@@ -1080,6 +2428,20 @@ declare namespace Bitflags {
             Bitflags.Organ.Unusable,
         ]
     >;
+
+    namespace Update {
+        type Name = 1;
+        type Desc = 2;
+        type IconState = 4;
+        type Overlays = 8;
+        type Greyscale = 16;
+        type Smoothing = 32;
+        type Icon = 12; // IconState | Overlays
+    }
+
+    type Update = Bitflag<
+        [Bitflags.Update.Name, Bitflags.Update.Desc, Bitflags.Update.IconState, Bitflags.Update.Overlays]
+    >;
 }
 
 declare namespace Enums {
@@ -1122,6 +2484,181 @@ declare namespace Enums {
     enum BodyPosition {
         StandingUp = 0,
         LyingDown = 1,
+    }
+
+    enum ItemSlot {
+        /**
+         * Suit slot (armors, costumes, space suits, etc.)
+         */
+        OClothing = 1 << 0,
+        /**
+         * Jumpsuit slot
+         */
+        IClothing = 1 << 1,
+        /**
+         * Glove slot
+         */
+        Gloves = 1 << 2,
+        /**
+         * Glasses slot
+         */
+        Eyes = 1 << 3,
+        /**
+         * Ear slot (radios, earmuffs)
+         */
+        Ears = 1 << 4,
+        /**
+         * Mask slot
+         */
+        Mask = 1 << 5,
+        /**
+         * Head slot (helmets, hats, etc.)
+         */
+        Head = 1 << 6,
+        /**
+         * Shoe slot
+         */
+        Feet = 1 << 7,
+        /**
+         * ID slot
+         */
+        Id = 1 << 8,
+        /**
+         * Belt slot
+         */
+        Belt = 1 << 9,
+        /**
+         * Back slot
+         */
+        Back = 1 << 10,
+        /**
+         * Dextrous simplemob "hands" (used for Drones and Dextrous Guardians)
+         */
+        DexStorage = 1 << 11,
+        /**
+         * Neck slot (ties, bedsheets, scarves)
+         */
+        Neck = 1 << 12,
+        /**
+         * A character's hand slots
+         */
+        Hands = 1 << 13,
+        /**
+         * Suit Storage slot
+         */
+        SuitStore = 1 << 14,
+        /**
+         * Left Pocket slot
+         */
+        LPocket = 1 << 15,
+        /**
+         * Right Pocket slot
+         */
+        RPocket = 1 << 16,
+        /**
+         * Handcuff slot
+         */
+        Handcuffed = 1 << 17,
+        /**
+         * Legcuff slot (bolas, beartraps)
+         */
+        Legcuffed = 1 << 18,
+    }
+
+    enum GrabLevel {
+        Passive = 0,
+        Aggressive = 1,
+        Neck = 2,
+        Kill = 3,
+    }
+
+    /**
+     * Sizes of mobs, used by mob/living/var/mob_size
+     */
+    enum MobSize {
+        Tiny = 0,
+        Small = 1,
+        Human = 2,
+        Large = 3,
+        /**
+         * Use this for things you don't want bluespace body-bagged
+         */
+        Huge = 4,
+    }
+
+    enum EmissiveBlock {
+        /**
+         * Uses vis_overlays to leverage caching so that very few new items need to be made for the overlay. For anything that doesn't change outline or opaque area much or at all.
+         */
+        Generic = 0,
+        /**
+         * Uses a dedicated render_target object to copy the entire appearance in real time to the blocking layer. For things that can change in appearance a lot from the base state, like humans.
+         */
+        Unique = 1,
+        /**
+         * Don't block any emissives. Useful for things like, pieces of paper?
+         */
+        None = 2,
+    }
+
+    /**
+     * currently_z_moving defines. Higher numbers mean higher priority.
+     */
+    enum CurrentlyZMoving {
+        /**
+         * This one is for falling down open space from stuff such as deleted tile, pit grate...
+         */
+        Falling = 1,
+        /**
+         * currently_z_moving is set to this in zMove() if 0.
+         */
+        MovingGeneric = 2,
+        /**
+         * This one is for falling down open space from movement.
+         */
+        FallingFromMove = 3,
+        /**
+         * This one is for going upstairs.
+         */
+        Ascending = 4,
+    }
+
+    /**
+     * Diagonal movement is split into two cardinal moves
+     */
+    enum DiagonalStep {
+        None = 0,
+        /**
+         * The first step of the diagnonal movement
+         */
+        First = 1,
+        /**
+         * The second step of the diagnonal movement
+         */
+        Second = 2,
+    }
+
+    enum HonorificPosition {
+        /**
+         * Honorific will display next to the first name.
+         */
+        First = 1 << 0,
+        /**
+         * Honorific will display next to the last name.
+         */
+        Last = 1 << 1,
+        /**
+         * Honorific will not be displayed.
+         */
+        None = 1 << 2,
+        /**
+         * Honorific will be appended to the full name at the start.
+         */
+        FirstFull = 1 << 3,
+        /**
+         * Honorific will be appended to the full name at the end.
+         */
+        LastFull = 1 << 4,
     }
 
     type BodyZone = "head" | "chest" | "l_arm" | "r_arm" | "l_leg" | "r_leg";

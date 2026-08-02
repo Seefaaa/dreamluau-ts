@@ -19,10 +19,11 @@ export const get_step = dm.global_procs._get_step;
 export const get_dir = dm.global_procs._get_dir;
 export const turn = dm.global_procs._turn;
 export const playsound = dm.global_procs.playsound;
+export const do_sparks = dm.global_procs.do_sparks;
 
-export function isSpecies<T extends keyof TypePathRegistry>(
+export function isSpecies<T extends PathsOf<Byond.Datum.Species>>(
     mob: Byond.Mob.Living.Carbon.Human,
-    species: T extends keyof TypePathRegistry ? (TypePathRegistry[T] extends Byond.Datum.Species ? T : never) : never
+    species: T
 ): mob is Byond.Mob.Living.Carbon.Human & { dna: { species: TypePathRegistry[T] } } {
     return dm.global_procs.is_species(mob, SS13.type(species)) === 1;
 }

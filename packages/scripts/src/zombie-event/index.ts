@@ -1,45 +1,71 @@
 /** @noSelfInFile */
 
-/** biome-ignore-all lint/correctness/noUnusedVariables: wip */
-
 import * as SS13 from "SS13";
+import { checkTick, makeClock } from "../common/tick";
+import { getZombieMutation } from "./globals";
+import { setupZombieMutation } from "./mutation";
 
-const isLocal = false;
-const admin = "sefaaa";
-const localClass = "Zombie (AI)";
-const allowZombieControllable = false;
-const isSpawning = false;
+// #region Initial settings
 
-SS13.state.supress_runtimes = true;
+admin = "sefaaa";
+isLocal = true;
+localClass = "Zombie";
 
-function tickLag(_tickUsageStart: number, worldTime: number): boolean {
-    if (dm.world.time !== worldTime) {
-        print("We slept somewhere!");
-        return true;
-    }
-    return _exec.time / (dm.world.tick_lag * 100) > 0.85;
-}
+isSpawning = false;
+allowTankSpawn = true;
+allowZombieControllable = false;
+destructibleSpawners = false;
+
+SS13.state.supress_runtimes = false;
+
+// #endregion
+
+// #region Boost subsystems
 
 if (!isLocal) {
     const SSfastprocess = dm.global_vars.SSfastprocess;
-    SSfastprocess.priority = 90;
-    SSfastprocess.flags = _G.bit32.band(SSfastprocess.flags, _G.bit32.bnot(4));
+    SSfastprocess.priority = 90; // FIRE_PRIORITY_PRIORITY_EFFECTS
+    SSfastprocess.flags = _G.bit32.band(SSfastprocess.flags, _G.bit32.bnot(4)); // removes SS_BACKGROUND (1 << 2)
 
     const SSlua = dm.global_vars.SSlua;
-    SSlua.priority = 110;
+    SSlua.priority = 105; // between SSmobs (100) and SStgui (110)
 }
 
-const maxPathfindingRange = 15;
+// #endregion
 
-sleep();
+// #region Entry point
 
-const blockActivation = 1;
+const client = assert(dm.global_vars.GLOB.directory.get(admin));
+const user = assert(client.mob);
 
-// #region Declarations
+if (isLocal) {
+    const human = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
+    human.ckey = client.ckey;
 
-declare global {
-    interface TraitSignals {
-        hooked: true; // used by smoker_hook ability
+    setupZombieMutation(human);
+} else {
+    const SSdcs = dm.global_vars.SSdcs;
+
+    SS13.unregister_signal(SSdcs, "!mob_created");
+
+    SS13.register_signal(SSdcs, "!mob_created", (_source, mob) => {
+        SS13.set_timeout(0, () => {
+            if (SS13.is_valid(mob) && SS13.istype(mob, "/mob/living/carbon/human")) {
+                if (!getZombieMutation(mob)) {
+                    setupZombieMutation(mob);
+                }
+            }
+        });
+    });
+
+    const clock = makeClock();
+
+    for (const [, human] of list.filter(dm.global_vars.GLOB.mob_living_list, "/mob/living/carbon/human")) {
+        checkTick(clock);
+
+        SS13.set_timeout(0, () => {
+            if (SS13.is_valid(human)) setupZombieMutation(human);
+        });
     }
 }
 

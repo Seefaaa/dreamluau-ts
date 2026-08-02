@@ -1,9 +1,3 @@
-// #region Configurable Constants
-
-export const allowTankSpawn = false;
-
-// #endregion
-
 // #region Constants
 
 export const cardinals = [1, 2, 4, 8] as const;
@@ -22,5 +16,7 @@ export const damageTypes = [
     "siemens_coeff",
     "tox_mod",
 ] as const satisfies UniqueFieldsOf<Byond.Datum.Physiology, Byond.Datum>[];
+
+export const maxPathfindingRange = 15;
 
 // #endregion

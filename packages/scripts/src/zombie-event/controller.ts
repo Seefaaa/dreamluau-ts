@@ -4,9 +4,7 @@ import * as SS13 from "SS13";
 import { grantAbility } from "../common/ability";
 import { add_trait, copytext, key_name_admin, message_admins, pick_list, ref, to_chat, trim } from "../common/globals";
 import { icon } from "../common/web-loader";
-import { allowTankSpawn } from "./constants";
 import { getZombieMutation } from "./globals";
-import { setClass } from "./mutation";
 import { getPlane, isZombieSpecies } from "./utils";
 
 // #region Zombie Controller
@@ -14,7 +12,7 @@ import { getPlane, isZombieSpecies } from "./utils";
 /**
  * Collection of all zombie controllers in the game.
  */
-const zombieControllers: Byond.Mob.Eye[] = [];
+export const zombieControllers: Byond.Mob.Eye[] = [];
 
 /**
  * Mapping of zombie controller references to their current target.
@@ -32,15 +30,19 @@ const deadPlayersByZLevel = dm.global_vars.SSmobs.dead_players_by_zlevel;
  * @param controller The controller mob that is sending the message.
  * @param message The message to be sent to other controllers.
  * @param big Whether the message should be displayed in a larger format and play a sound effect.
+ * @param nameOverride Optional override for the sender name displayed in the message.
  */
-function controllerSay(controller: Byond.Mob.Eye, message: string, big: boolean) {
+export function controllerSay(controller: Byond.Mob, message: string, big?: boolean, nameOverride?: string) {
     const trimmed = copytext(trim(message), 1, 1024);
+
+    if (trimmed.length === 0) return;
 
     controller.log_talk(trimmed, 2);
 
     const renderedText = controller.generate_messagepart(trimmed);
+    const senderName = nameOverride ?? tostring(controller);
 
-    let rendered = `<span class='nicegreen'><b>[Controller Talk] ${controller}</b> ${renderedText}</span>`;
+    let rendered = `<span class='nicegreen'><b>[Controller Talk] ${senderName}</b> ${renderedText}</span>`;
 
     if (big) {
         for (const controller of zombieControllers) {
@@ -58,7 +60,11 @@ function controllerSay(controller: Byond.Mob.Eye, message: string, big: boolean)
  * @param location The turf location where the zombie controller will be spawned.
  * @returns The newly created zombie controller mob.
  */
-export function makeZombieController(location: Byond.Turf): Byond.Mob.Eye {
+export function makeZombieController(
+    location: Byond.Turf,
+    // lua cant resolve circular imports as good as ts can, so we have to pass this in as a parameter instead of importing it
+    setClass: typeof import("./mutation").setClass
+): Byond.Mob.Eye {
     // #region Controller Creation
 
     const controller = SS13.new("/mob/eye", location);
@@ -68,7 +74,7 @@ export function makeZombieController(location: Byond.Turf): Byond.Mob.Eye {
     controller.see_invisible = 35;
     controller.layer = 5;
     controller.plane = getPlane(-3, location);
-    controller.faction = list.from_table(["zombie"]);
+    controller.set_faction(["zombie"]);
     controller.set_sight(60);
     controller.mouse_opacity = 1;
     controller.color = "#33cc33";
@@ -236,7 +242,7 @@ export function makeZombieController(location: Byond.Turf): Byond.Mob.Eye {
 
                 isUiOpen = false;
 
-                if (message) controllerSay(controller, message, false);
+                if (message) controllerSay(controller, message);
             });
 
             return 0;

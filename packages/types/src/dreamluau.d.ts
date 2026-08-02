@@ -85,7 +85,7 @@ declare const dm: {
     /**
      * Corresponds to the DM var usr.
      */
-    readonly usr: Byond.Datum | undefined;
+    readonly usr: Byond.Mob | undefined;
 };
 
 /**
@@ -230,15 +230,17 @@ declare namespace Byond {
     type False = Extract<Byond.Bool, 0>;
 
     class Type<T = unknown> {
-        readonly __sealed: true;
+        readonly __type?: T;
     }
 
-    interface List<K extends AnyNotNil, V> extends LuaPairsIterable<K, V> {
-        get: LuaTableGetMethod<K, V | undefined>;
-        set: LuaTableSetMethod<K, V>;
-        delete: LuaTableDeleteMethod<K>;
-        length: LuaLengthMethod<number>;
-    }
+    type List<K extends AnyNotNil, V> = LuaIterable<LuaMultiReturn<[K, V]>> &
+        Iterable<[K, V]> & {
+            get: LuaTableGetMethod<K, V | undefined>;
+            set: LuaTableSetMethod<K, V>;
+            has: LuaTableHasMethod<K>;
+            delete: LuaTableDeleteMethod<K>;
+            length: LuaLengthMethod<number>;
+        };
 
     class Sound {
         readonly __sealed: true;
@@ -253,7 +255,9 @@ declare namespace Byond {
     }
 
     class Datum {
-        readonly type: Type;
+        private readonly __this?: this;
+
+        readonly type: Byond.Type<this>;
     }
 
     class Client extends Datum {
@@ -261,6 +265,13 @@ declare namespace Byond {
          * This is a read-only value that contains the player’s key. Once the player is attached to a mob M, M.key == M.client.key.
          */
         key: string;
+
+        /**
+         * This is a read-only value that is the canonical form of the player’s key (ie the value returned by ckey()). Among other things, this could be used as a unique directory name in a server-side save file for storing player information. See the ckey() proc for an example.
+         */
+        ckey: string;
+
+        mob: Byond.Mob;
     }
 
     class Atom extends Datum {
@@ -273,6 +284,11 @@ declare namespace Byond {
 
         /** The name of the object type with underscores converted to spaces. */
         name: string;
+
+        /**
+         * This is the description of the object.
+         */
+        desc: string | undefined;
 
         /**
          * This determines the object’s level of invisibility. The corresponding mob variable see_invisible controls the maximum level of invisibility that the mob may see.
@@ -288,6 +304,23 @@ declare namespace Byond {
          * The value of plane overrides layer, and is mainly used for non-topdown map formats like isometric. Positive values are drawn on top, and negative values are drawn below. This mostly deprecates EFFECTS_LAYER and BACKGROUND_LAYER, but they can still be useful when using PLANE_MASTER for effects (see appearance_flags).
          */
         plane: number;
+
+        /**
+         * This displaces the object's icon horizontally by the specified number of pixels. Positive values move to the right; negative values move to the left.
+         */
+        pixel_x: number;
+
+        /**
+         * This displaces the object's icon vertically by the specified number of pixels. Positive values move up; negative values move down.
+         */
+        pixel_y: number;
+
+        /**
+         * This displaces the object’s icon vertically by the specified number of pixels. This is meant to be used in situations where world.map_format is used to display something other than a top-down form, for instance in an isometric or side-view display. In a top-down mode pixel_z behaves the same as pixel_y, except that it does not rotate with changes to client.dir.
+         *
+         * This effect is purely visual and does not influence such things as movement bumping or view() range calculations.
+         */
+        pixel_z: number;
 
         /**
          * This may be used to control how mouse operations on an object are interpreted. A click or mouse movement over an object’s icon normally applies to that object only if it is the topmost object that is not transparent at the position of the mouse. Setting mouse_opacity to 0 would cause the object to be ignored completely, and setting it to 2 causes it to always be chosen over any lower-level objects, regardless of the transparency of its icon.
@@ -354,9 +387,9 @@ declare namespace Byond {
         }
     }
 
-    class Obj extends Byond.Atom {}
+    class Obj extends Byond.Atom.Movable {}
 
-    class Mob extends Atom.Movable {
+    class Mob extends Byond.Atom.Movable {
         /** This is the maximum level of invisibility that the mob can see. */
         see_invisible: number;
 
@@ -375,12 +408,17 @@ declare namespace Byond {
          * Key values are always compared in canonical form (ie the form returned by ckey()) so setting a mob’s key to “Dan”, “dan” are equivalent as far as controlling player linkage.
          */
         key: string | undefined;
+
+        /**
+         * This is the value of mob.key converted to canonical form (ie the form returned by the ckey() proc). Among other things, this could be used as a unique directory name in a server-side save file for storing player information. See the ckey() proc for an example.
+         */
+        ckey: string | undefined;
     }
 
-    class Turf extends Atom {}
-    class Area extends Datum {}
+    class Turf extends Byond.Atom {}
+    class Area extends Byond.Datum {}
 
-    class World extends Datum {
+    class World extends Byond.Datum {
         time: number;
         tick_lag: number;
     }

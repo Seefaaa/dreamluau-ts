@@ -1,7 +1,7 @@
 /** @noSelfInFile */
 
 import * as SS13 from "SS13";
-import { isSpecies } from "../common/globals";
+import { isSpecies, ref } from "../common/globals";
 
 export function getPlane(newPlane: number, zReference: Byond.Atom): number {
     const SSmapping = dm.global_vars.SSmapping;
@@ -33,6 +33,9 @@ export function getPlane(newPlane: number, zReference: Byond.Atom): number {
         return newPlane;
     }
 }
+
+export const createHref = (target: Byond.Atom, params: string, content: string): string =>
+    `<a href="byond://?src=${ref(target)};${params}">${content}</a>`;
 
 export const isZombieSpecies = (mob: Byond.Mob.Living.Carbon.Human) =>
     isSpecies(mob, "/datum/species/zombie/infectious");

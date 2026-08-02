@@ -1,11 +1,9 @@
 /** @noSelfInFile */
 
 import { ref } from "../common/globals";
-import type { MutationData } from "./mutation";
 
-declare var allHumanData: Record<string, MutationData>;
-allHumanData = allHumanData ?? {};
+allMutations = allMutations ?? {};
 
 export function getZombieMutation(human: Byond.Mob) {
-    return allHumanData[ref(human)];
+    return allMutations[ref(human)];
 }
