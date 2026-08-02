@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "./packages/types" }, { "path": "./packages/scripts" }]
+  "references": [{ "path": "./packages/types" }, { "path": "./packages/scripts" }, { "path": "./packages/formatter" }]
 }

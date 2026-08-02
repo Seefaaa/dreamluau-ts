@@ -12,7 +12,8 @@
     "luaTarget": "Luau",
     "noImplicitSelf": true,
     "luaBundle": "main.lua",
-    "luaBundleEntry": "./src/index.ts"
+    "luaBundleEntry": "./src/index.ts",
+    "luaPlugins": [{ "name": "formatter" }]
   },
   "include": ["src"]
 }

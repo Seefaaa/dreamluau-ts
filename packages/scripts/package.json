@@ -5,11 +5,13 @@
   "private": true,
   "scripts": {
     "build": "tstl",
+    "build:release": "NODE_ENV=production tstl",
     "dev": "tstl --watch"
   },
   "devDependencies": {
-    "typescript-to-lua": "^1.37.1",
-    "byond-types": "workspace:*"
+    "byond-types": "workspace:*",
+    "formatter": "workspace:*",
+    "typescript-to-lua": "^1.37.1"
   },
   "peerDependencies": {
     "typescript": "^6"
