@@ -4,7 +4,7 @@
 declare namespace SS13 {
     class Subsystem extends Byond.Datum {
         priority: number;
-        flags: number;
+        ss_flags: number;
     }
 
     class SSfastprocess extends Subsystem {}

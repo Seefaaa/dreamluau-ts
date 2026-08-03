@@ -11,7 +11,10 @@
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    // must stay off: tstl honours it by emitting a `require` for type-only imports too, which turns a
+    // types-only edge between two modules into a real runtime cycle in the bundle (and the bundle's
+    // loader caches after the module body runs, so a cycle is a stack overflow, not a partial export).
+    "verbatimModuleSyntax": false,
     "noEmit": true,
 
     // Best practices

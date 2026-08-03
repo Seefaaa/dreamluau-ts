@@ -339,6 +339,12 @@ export abstract class SpecialZombie extends ZombieClass {
 
 export class NonZombie extends ZombieClass {
     override onGain(mutation: MutationData) {
+        const infection = mutation.mob.get_organ_slot("zombie_infection");
+
+        if (infection) {
+            SS13.qdel(infection);
+        }
+
         this.registerSignal(mutation, mutation.mob, "atom_entered", (source, arrived) => {
             if (has_trait(arrived, "zs_zombie_cure")) {
                 invokeAsync(() => {
@@ -574,7 +580,7 @@ export class Tank extends SpecialZombie {
 
                 for (const _ of $range(1, 8)) {
                     const nextTurf = get_step(targetTurf, dir);
-                    if (nextTurf.is_blocked_turf(true, target)) break;
+                    if (nextTurf.is_blocked_turf(true, target) === 1) break;
                     targetTurf = nextTurf;
                 }
 

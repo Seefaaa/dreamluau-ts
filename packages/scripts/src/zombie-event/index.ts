@@ -7,7 +7,7 @@ import { setupZombieMutation } from "./mutation";
 // #region Initial settings
 
 runner = SS13.get_runner_ckey();
-isLocal = true;
+isLocal = false;
 localClass = "Zombie";
 
 isSpawning = false;
@@ -24,7 +24,7 @@ SS13.state.supress_runtimes = false;
 if (!isLocal) {
     const SSfastprocess = dm.global_vars.SSfastprocess;
     SSfastprocess.priority = 90; // FIRE_PRIORITY_PRIORITY_EFFECTS
-    SSfastprocess.flags = _G.bit32.band(SSfastprocess.flags, _G.bit32.bnot(4)); // removes SS_BACKGROUND (1 << 2)
+    SSfastprocess.ss_flags = _G.bit32.band(SSfastprocess.ss_flags, _G.bit32.bnot(4)); // removes SS_BACKGROUND (1 << 2)
 
     const SSlua = dm.global_vars.SSlua;
     SSlua.priority = 105; // between SSmobs (100) and SStgui (110)

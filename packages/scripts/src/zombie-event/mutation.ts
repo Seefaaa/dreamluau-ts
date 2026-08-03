@@ -114,7 +114,10 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
         const admin = isAdmin(examiner);
 
         if (admin || SS13.istype(examiner, "/mob/dead")) {
-            list.add(examination, `<hr/><span class='notice'>Zombie Class: ${mutation.class}</span>`);
+            list.add(
+                examination,
+                `<hr/><span class='notice'>Zombie Class: ${admin ? createHref(human, "set_class=1", mutation.class ?? "Unassigned") : mutation.class}</span>`
+            );
 
             const infection = human.get_organ_slot("zombie_infection");
             const status = SS13.is_valid(infection) ? "<span class='danger'>Infected</span>" : "Not infected";
@@ -122,7 +125,6 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
             list.add(examination, `<span class='notice'>Infection Status: ${status}</span>`);
 
             if (admin) {
-                list.add(examination, `<span class='notice'>${createHref(human, "set_class=1", "Set class")}</span>`);
                 list.add(
                     examination,
                     `<span class='notice'>${createHref(human, "settings=1", "Open settings menu")}</span>`
@@ -179,237 +181,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
         invokeAsync(() => {
             let refresh = false;
 
-            if ("set_spawning" in hrefList) {
-                isSpawning = hrefList.get("set_spawning") === "1";
-                refresh = true;
-            } else if ("set_tank_spawn" in hrefList) {
-                allowTankSpawn = hrefList.get("set_tank_spawn") === "1";
-                refresh = true;
-            } else if ("set_zombie_control" in hrefList) {
-                allowZombieControllable = hrefList.get("set_zombie_control") === "1";
-                refresh = true;
-            } else if ("spawn_supply_crate" in hrefList) {
-                const pod = dm.global_procs.podspawn({
-                    target: SS13.get_turf(user),
-                    style: SS13.type("/datum/pod_style/centcom"),
-                });
-
-                const crate = SS13.new("/obj/structure/closet/crate/secure/gear", pod);
-                crate.name = "secure supply crate";
-
-                if ("timed" in hrefList) {
-                    crate.anchored = true;
-                    crate.set_access(["admin"]);
-
-                    crate.say("Disengaging secure locks in 30 seconds");
-
-                    SS13.start_loop(10, 3, (iteration) => {
-                        if (!SS13.is_valid(crate)) return;
-
-                        if (iteration === 3) {
-                            crate.bust_open();
-                            crate.say("Secure locks disengaged.");
-                        } else {
-                            crate.say(`Disengaging secure locks in ${30 - iteration * 10} seconds`);
-                        }
-                    });
-                }
-
-                for (const _ of $range(1, 4)) SS13.new("/obj/item/gun/energy/laser", crate);
-                for (const _ of $range(1, 3)) SS13.new("/obj/item/storage/medkit/tactical_lite", crate);
-                for (const _ of $range(1, 2)) SS13.new("/obj/item/defibrillator/compact/loaded", crate);
-            } else if ("spawn_cure" in hrefList) {
-                const crate = SS13.new("/obj/structure/closet/crate/secure/freezer", SS13.get_turf(user));
-                crate.name = "secure biocrate";
-                crate.base_icon_state = "freezer";
-                crate.icon_state = "freezer";
-
-                for (const _ of $range(1, 5)) createCureInjector(crate);
-            } else if ("spawn_cure_spawner" in hrefList) {
-                const crate = SS13.new("/obj/structure/closet/crate/secure/freezer", SS13.get_turf(user));
-                crate.name = "biocure generator";
-                crate.base_icon_state = "freezer";
-                crate.icon_state = "freezer";
-                crate.anchored = true;
-
-                const loop = SS13.start_loop(5, -1, () => {
-                    if (!SS13.is_valid(crate)) {
-                        SS13.end_loop(loop);
-                        return;
-                    }
-
-                    const hitLimit = (location: Byond.Atom) => {
-                        let count = 0;
-                        for (const [, obj] of list.filter(location.contents, "/obj/item/implanter")) {
-                            if (SS13.is_valid(obj.imp) && has_trait(obj.imp, "zs_zombie_cure")) count += 1;
-                        }
-                        return count >= 5;
-                    };
-
-                    if (crate.opened === 1) {
-                        const location = crate.loc;
-                        if (location && !hitLimit(location)) {
-                            createCureInjector(location);
-                            do_sparks(
-                                2,
-                                true,
-                                crate,
-                                crate,
-                                SS13.type("/datum/effect_system/basic/spark_spread/quantum")
-                            );
-                        }
-                    } else if (!hitLimit(crate)) createCureInjector(crate);
-                });
-
-                SS13.register_signal(crate, "parent_qdeleting", () => {
-                    SS13.end_loop(loop);
-                });
-            } else if ("spawn_zombie_ai" in hrefList) {
-                const zombie = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
-
-                zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
-
-                const mutation = setupZombieMutation(zombie);
-                mutation.spawned = true;
-
-                ZombieClass.setClass(mutation, "Zombie (AI)");
-            } else if ("spawn_zombie_spawner" in hrefList) {
-                let zombies = 0;
-
-                const spawner = SS13.new("/obj/structure/geyser", SS13.get_turf(user));
-                spawner.name = "zombie spawner";
-                spawner.color = "#008000";
-                spawner.anchored = true;
-                spawner.layer = 4.1;
-                spawner.pixel_y = -4;
-
-                if (!destructibleSpawners) {
-                    // lavaproof (1) | fireproof (2) | unacidable (16) | acidproof (32)
-                    // indestructible (64) | freezeproof (128) | shuttlecrushproof (256)
-                    spawner.resistance_flags = 499;
-                }
-
-                const spawn = (force: boolean, special: boolean) => {
-                    if (!isSpawning && !force) return;
-                    if (!SS13.is_valid(spawner)) return;
-                    if (zombies >= 5 && !force) return;
-
-                    const location = SS13.get_turf(spawner);
-                    let className: keyof typeof zombieClasses = "Zombie (AI)";
-
-                    let mind: Byond.Datum.Mind | undefined;
-
-                    if (math.random(1, 10) === 1 || special) {
-                        className = pick_list(["Boomer", "Jockey", "Smoker"]);
-
-                        const [candidates] = SS13.await(
-                            dm.global_vars.SSpolling,
-                            "poll_ghost_candidates",
-                            `The mode is looking for volunteers to become a ${className}.`,
-                            undefined,
-                            undefined,
-                            100,
-                            undefined,
-                            undefined,
-                            spawner,
-                            spawner,
-                            className
-                        );
-
-                        if (!SS13.is_valid(spawner)) return;
-
-                        let chosen: Byond.Mob | undefined;
-
-                        if (candidates === undefined) {
-                        } else if (SS13.istype(candidates, "/mob")) chosen = candidates;
-                        else chosen = pick_list(candidates);
-
-                        if (!SS13.is_valid(chosen)) {
-                            message_admins(`Not enough players volunteered for the ${className} role.`);
-                            return;
-                        }
-
-                        message_admins(`Selected ${key_name_admin(chosen)} for the role of ${className}.`);
-
-                        mind = SS13.new("/datum/mind", chosen.key);
-                    }
-
-                    const zombie = SS13.new("/mob/living/carbon/human", location);
-                    zombie.anchored = true;
-
-                    zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
-
-                    add_trait(zombie, "block_transformations", "zs_spawner");
-
-                    const mutation = setupZombieMutation(zombie);
-                    mutation.spawned = true;
-
-                    ZombieClass.setClass(mutation, className);
-
-                    zombies += 1;
-
-                    if (mind) mind.transfer_to(zombie, true);
-
-                    SS13.set_timeout(1, () => {
-                        if (!SS13.is_valid(zombie)) return;
-
-                        zombie.anchored = false;
-
-                        remove_trait(zombie, "block_transformations", "zs_spawner");
-
-                        const group = HandlerGroup.new();
-
-                        group.register_signal(zombie, "living_death", () => {
-                            zombies -= 1;
-                            group.clear();
-                        });
-
-                        group.register_signal(zombie, "parent_qdeleting", () => {
-                            zombies -= 1;
-                            group.clear();
-                        });
-                    });
-                };
-
-                const loop = SS13.start_loop(60, -1, () => spawn(false, false));
-
-                SS13.register_signal(spawner, "parent_qdeleting", () => {
-                    SS13.end_loop(loop);
-                });
-
-                SS13.register_signal(spawner, "atom_examine", (_source, examiner, examination) => {
-                    if (isAdmin(examiner)) {
-                        list.add(
-                            examination,
-                            `<span class='notice'>${createHref(spawner, "spawn=1", "Spawn zombie")}</span>`
-                        );
-                        list.add(
-                            examination,
-                            `<span class='notice'>${createHref(spawner, "spawn_special=1", "Spawn special")}</span>`
-                        );
-                    }
-                });
-
-                SS13.register_signal(spawner, "handle_topic", (_source, user, hrefList) => {
-                    if (!isAdmin(user)) return;
-
-                    invokeAsync(() => {
-                        if ("spawn" in hrefList) spawn(true, false);
-                        else if ("spawn_special" in hrefList) spawn(true, true);
-                    });
-                });
-            } else if ("message_controllers" in hrefList) {
-                const [message] = SS13.await(
-                    SS13.global_proc,
-                    "tgui_input_text",
-                    user,
-                    "Send message to controllers",
-                    "Message controllers"
-                );
-                if (!message) return;
-
-                controllerSay(user, message, true, "Controller Overseer");
-            } else if ("set_class" in hrefList) {
+            if ("set_class" in hrefList) {
                 const classList: string[] = [];
 
                 for (const className in zombieClasses) {
@@ -431,7 +203,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                 if (!SS13.is_valid(user) || !SS13.is_valid(human)) return;
 
                 ZombieClass.setClass(mutation, choice as keyof typeof zombieClasses);
-            }
+            } else refresh = handleSettingsTopic(user, hrefList) ?? refresh;
 
             if (refresh || "settings" in hrefList || "refresh" in hrefList) {
                 openZombieSettings(user, mutation);
@@ -519,6 +291,235 @@ function openZombieSettings(user: Byond.Mob, mutation: MutationData) {
 
     browser.set_content(content);
     browser.open();
+}
+
+function handleSettingsTopic(user: Byond.Mob, hrefList: Byond.List<string, string>): boolean | undefined {
+    let refresh = false;
+
+    if ("set_spawning" in hrefList) {
+        isSpawning = hrefList.get("set_spawning") === "1";
+        refresh = true;
+    } else if ("set_tank_spawn" in hrefList) {
+        allowTankSpawn = hrefList.get("set_tank_spawn") === "1";
+        refresh = true;
+    } else if ("set_zombie_control" in hrefList) {
+        allowZombieControllable = hrefList.get("set_zombie_control") === "1";
+        refresh = true;
+    } else if ("spawn_supply_crate" in hrefList) {
+        const pod = dm.global_procs.podspawn({
+            target: SS13.get_turf(user),
+            style: SS13.type("/datum/pod_style/centcom"),
+        });
+
+        const crate = SS13.new("/obj/structure/closet/crate/secure/gear", pod);
+        crate.name = "secure supply crate";
+
+        if ("timed" in hrefList) {
+            crate.anchored = true;
+            crate.set_access(["admin"]);
+
+            crate.say("Disengaging secure locks in 30 seconds");
+
+            SS13.start_loop(10, 3, (iteration) => {
+                if (!SS13.is_valid(crate)) return;
+
+                if (iteration === 3) {
+                    crate.bust_open();
+                    crate.say("Secure locks disengaged.");
+                } else {
+                    crate.say(`Disengaging secure locks in ${30 - iteration * 10} seconds`);
+                }
+            });
+        }
+
+        for (const _ of $range(1, 4)) SS13.new("/obj/item/gun/energy/laser", crate);
+        for (const _ of $range(1, 3)) SS13.new("/obj/item/storage/medkit/tactical_lite", crate);
+        for (const _ of $range(1, 2)) SS13.new("/obj/item/defibrillator/compact/loaded", crate);
+    } else if ("spawn_cure" in hrefList) {
+        const crate = SS13.new("/obj/structure/closet/crate/secure/freezer", SS13.get_turf(user));
+        crate.name = "secure biocrate";
+        crate.base_icon_state = "freezer";
+        crate.icon_state = "freezer";
+
+        for (const _ of $range(1, 5)) createCureInjector(crate);
+    } else if ("spawn_cure_spawner" in hrefList) {
+        const crate = SS13.new("/obj/structure/closet/crate/secure/freezer", SS13.get_turf(user));
+        crate.name = "biocure generator";
+        crate.base_icon_state = "freezer";
+        crate.icon_state = "freezer";
+        crate.anchored = true;
+
+        const loop = SS13.start_loop(5, -1, () => {
+            if (!SS13.is_valid(crate)) {
+                SS13.end_loop(loop);
+                return;
+            }
+
+            const hitLimit = (location: Byond.Atom) => {
+                let count = 0;
+                for (const [, obj] of list.filter(location.contents, "/obj/item/implanter")) {
+                    if (SS13.is_valid(obj.imp) && has_trait(obj.imp, "zs_zombie_cure")) count += 1;
+                }
+                return count >= 5;
+            };
+
+            if (crate.opened === 1) {
+                const location = crate.loc;
+                if (location && !hitLimit(location)) {
+                    createCureInjector(location);
+                    do_sparks(2, true, crate, crate, SS13.type("/datum/effect_system/basic/spark_spread/quantum"));
+                }
+            } else if (!hitLimit(crate)) createCureInjector(crate);
+        });
+
+        SS13.register_signal(crate, "parent_qdeleting", () => {
+            SS13.end_loop(loop);
+        });
+    } else if ("spawn_zombie_ai" in hrefList) {
+        const zombie = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
+
+        zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
+
+        const mutation = setupZombieMutation(zombie);
+        mutation.spawned = true;
+
+        ZombieClass.setClass(mutation, "Zombie (AI)");
+    } else if ("spawn_zombie_spawner" in hrefList) {
+        let zombies = 0;
+
+        const spawner = SS13.new("/obj/structure/geyser", SS13.get_turf(user));
+        spawner.name = "zombie spawner";
+        spawner.color = "#008000";
+        spawner.anchored = true;
+        spawner.layer = 4.1;
+        spawner.pixel_y = -4;
+
+        if (!destructibleSpawners) {
+            // lavaproof (1) | fireproof (2) | unacidable (16) | acidproof (32)
+            // indestructible (64) | freezeproof (128) | shuttlecrushproof (256)
+            spawner.resistance_flags = 499;
+        }
+
+        const spawn = (force: boolean, special: boolean) => {
+            if (!isSpawning && !force) return;
+            if (!SS13.is_valid(spawner)) return;
+            if (zombies >= 5 && !force) return;
+
+            const location = SS13.get_turf(spawner);
+            let className: keyof typeof zombieClasses = "Zombie (AI)";
+
+            let mind: Byond.Datum.Mind | undefined;
+
+            if (math.random(1, 10) === 1 || special) {
+                className = pick_list(["Boomer", "Jockey", "Smoker"]);
+
+                const [candidates] = SS13.await(
+                    dm.global_vars.SSpolling,
+                    "poll_ghost_candidates",
+                    `The mode is looking for volunteers to become a ${className}.`,
+                    undefined,
+                    undefined,
+                    100,
+                    undefined,
+                    undefined,
+                    spawner,
+                    spawner,
+                    className
+                );
+
+                if (!SS13.is_valid(spawner)) return;
+
+                let chosen: Byond.Mob | undefined;
+
+                if (candidates === undefined) {
+                } else if (SS13.istype(candidates, "/mob")) chosen = candidates;
+                else chosen = pick_list(candidates);
+
+                if (!SS13.is_valid(chosen)) {
+                    message_admins(`Not enough players volunteered for the ${className} role.`);
+                    return;
+                }
+
+                message_admins(`Selected ${key_name_admin(chosen)} for the role of ${className}.`);
+
+                mind = SS13.new("/datum/mind", chosen.key);
+            }
+
+            const zombie = SS13.new("/mob/living/carbon/human", location);
+            zombie.anchored = true;
+
+            zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
+
+            add_trait(zombie, "block_transformations", "zs_spawner");
+
+            const mutation = setupZombieMutation(zombie);
+            mutation.spawned = true;
+
+            ZombieClass.setClass(mutation, className);
+
+            zombies += 1;
+
+            if (mind) mind.transfer_to(zombie, true);
+
+            SS13.set_timeout(1, () => {
+                if (!SS13.is_valid(zombie)) return;
+
+                zombie.anchored = false;
+
+                remove_trait(zombie, "block_transformations", "zs_spawner");
+
+                const group = HandlerGroup.new();
+
+                group.register_signal(zombie, "living_death", () => {
+                    zombies -= 1;
+                    group.clear();
+                });
+
+                group.register_signal(zombie, "parent_qdeleting", () => {
+                    zombies -= 1;
+                    group.clear();
+                });
+            });
+        };
+
+        const loop = SS13.start_loop(60, -1, () => spawn(false, false));
+
+        SS13.register_signal(spawner, "parent_qdeleting", () => {
+            SS13.end_loop(loop);
+        });
+
+        SS13.register_signal(spawner, "atom_examine", (_source, examiner, examination) => {
+            if (isAdmin(examiner)) {
+                list.add(examination, `<span class='notice'>${createHref(spawner, "spawn=1", "Spawn zombie")}</span>`);
+                list.add(
+                    examination,
+                    `<span class='notice'>${createHref(spawner, "spawn_special=1", "Spawn special")}</span>`
+                );
+            }
+        });
+
+        SS13.register_signal(spawner, "handle_topic", (_source, user, hrefList) => {
+            if (!isAdmin(user)) return;
+
+            invokeAsync(() => {
+                if ("spawn" in hrefList) spawn(true, false);
+                else if ("spawn_special" in hrefList) spawn(true, true);
+            });
+        });
+    } else if ("message_controllers" in hrefList) {
+        const [message] = SS13.await(
+            SS13.global_proc,
+            "tgui_input_text",
+            user,
+            "Send message to controllers",
+            "Message controllers"
+        );
+        if (!message) return false;
+
+        controllerSay(user, message, true, "Controller Overseer");
+    } else return undefined;
+
+    return refresh;
 }
 
 const label = (label: string, content: string): string =>

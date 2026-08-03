@@ -300,7 +300,7 @@ export function makeZombieController(
 
             const mutation = getMutation(target);
 
-            if (!mutation || mutation.class !== "Zombie (AI)" || !mutation.spawned) {
+            if (!mutation || mutation.class !== "Zombie (AI)") {
                 controller.balloon_alert(controller, "invalid target");
                 return 1;
             }
@@ -347,6 +347,10 @@ export function makeZombieController(
 
                 if (!SS13.is_valid(chosen)) {
                     message_admins("Not enough players volunteered for the Tank role.");
+                    to_chat(
+                        controller,
+                        "<span class='warning'>Not enough players volunteered for the Tank role.</span>"
+                    );
                     setClass(mutation, "Zombie (AI)");
                     if (SS13.is_valid(action)) action.StartCooldownSelf(1);
                     return;
