@@ -12,6 +12,7 @@ declare interface TypePathRegistry {
 
     "/datum": Byond.Datum;
     "/datum/action/cooldown": Byond.Datum.Action.Cooldown;
+    "/datum/admins": Byond.Datum.Admins;
     "/datum/antagonist/custom": Byond.Datum.Antagonist.Custom;
     "/datum/bank_account": Byond.Datum.BankAccount;
     "/datum/browser": Byond.Datum.Browser;
@@ -22,6 +23,12 @@ declare interface TypePathRegistry {
     "/datum/effect_system/basic": Byond.Datum.EffectSystem.Basic;
     "/datum/effect_system/basic/spark_spread": Byond.Datum.EffectSystem.Basic.SparkSpread;
     "/datum/effect_system/basic/spark_spread/quantum": Byond.Datum.EffectSystem.Basic.SparkSpread.Quantum;
+    "/datum/effect_system/fluid_spread": Byond.Datum.EffectSystem.FluidSpread;
+    "/datum/effect_system/fluid_spread/foam": Byond.Datum.EffectSystem.FluidSpread.Foam;
+    "/datum/effect_system/fluid_spread/foam/short": Byond.Datum.EffectSystem.FluidSpread.Foam.Short;
+    "/datum/element": Byond.Datum.Element;
+    "/datum/element/footstep": Byond.Datum.Element.Footstep;
+    "/datum/element/wall_tearer": Byond.Datum.Element.WallTearer;
     "/datum/fluid_group": Byond.Datum.FluidGroup;
     "/datum/gas_mixture": Byond.Datum.GasMixture;
     "/datum/http_request": Byond.Datum.HttpRequest;
@@ -48,13 +55,20 @@ declare interface TypePathRegistry {
     "/datum/species/human": Byond.Datum.Species.Human;
     "/datum/species/zombie": Byond.Datum.Species.Zombie;
     "/datum/species/zombie/infectious": Byond.Datum.Species.Zombie.Infectious;
+    "/datum/status_effect": Byond.Datum.StatusEffect;
+    "/datum/status_effect/incapacitating": Byond.Datum.StatusEffect.Incapacitating;
+    "/datum/status_effect/incapacitating/knockdown": Byond.Datum.StatusEffect.Incapacitating.Knockdown;
     "/datum/weakref": Byond.Datum.Weakref<Byond.Datum>;
 
     "/icon": Byond.Icon;
 
+    "/mutable_appearance": Byond.MutableAppearance;
+
     "/mob": Byond.Mob;
     "/mob/dead": Byond.Mob.Dead;
     "/mob/eye": Byond.Mob.Eye;
+    "/mob/living": Byond.Mob.Living;
+    "/mob/living/carbon": Byond.Mob.Living.Carbon;
     "/mob/living/carbon/human": Byond.Mob.Living.Carbon.Human;
 
     "/obj": Byond.Obj;
@@ -64,6 +78,7 @@ declare interface TypePathRegistry {
     "/obj/effect/particle_effect/fluid/foam": Byond.Obj.Effect.ParticleEffect.Fluid.Foam;
     "/obj/effect/particle_effect/fluid/foam/short_life": Byond.Obj.Effect.ParticleEffect.Fluid.Foam.ShortLife;
     "/obj/item/ammo_casing/magic/hook": Byond.Obj.Item.AmmoCasing.Magic.Hook;
+    "/obj/item/bodypart": Byond.Obj.Item.Bodypart;
     "/obj/item/card": Byond.Obj.Item.Card;
     "/obj/item/card/id": Byond.Obj.Item.Card.Id;
     "/obj/item/defibrillator": Byond.Obj.Item.Defibrillator;

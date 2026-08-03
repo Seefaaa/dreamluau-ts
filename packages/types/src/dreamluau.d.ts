@@ -250,9 +250,16 @@ declare namespace Byond {
         readonly __sealed: true;
     }
 
-    class Image {
-        readonly __sealed: true;
+    class Image extends Byond.Datum {
+        icon: Byond.Icon | null;
+        icon_state: string | null;
+        appearance_flags: number;
+        alpha: number;
+
+        add_overlay(this: Byond.Image, overlay: Byond.Datum): void;
     }
+
+    class MutableAppearance extends Byond.Image {}
 
     class Datum {
         private readonly __this?: this;
@@ -278,6 +285,13 @@ declare namespace Byond {
         x: number;
         y: number;
         z: number;
+
+        /**
+         * Controls the opacity of the icon displayed on players’ screens. A value of 128 means the atom is half-transparent, so it will have a ghostly appearance. This can be used to fade an atom in and out, especially when combined with animation. Alpha is also applied to maptext.
+         *
+         * Overlays and images will also be affected by alpha, unless they use the RESET_ALPHA value in appearance_flags.
+         */
+        alpha: number;
 
         /** The location of the object or null if there is none. */
         loc: Byond.Turf | undefined;

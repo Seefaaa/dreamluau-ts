@@ -61,6 +61,19 @@ declare interface Signals<S extends Byond.Datum> {
         thrown_proj: Byond.Obj.Projectile
     ) => Signal;
     handle_topic: (source: S, usr: Byond.Mob, href_list: Byond.List<string, string>) => Signal;
+    item_afterattack: (
+        source: S extends Byond.Obj.Item ? S : never,
+        target: Byond.Atom,
+        user: Byond.Mob.Living,
+        modifiers: Byond.List<string, any> | undefined,
+        attack_modifiers: Byond.List<string, any> | undefined
+    ) => Signal;
+    item_interacting_with_atom: (
+        source: S extends Byond.Obj.Item ? S : never,
+        user: Byond.Mob.Living,
+        interacting_with: Byond.Atom,
+        modifiers: Byond.List<string, any> | undefined
+    ) => Signal<[ITEM_INTERACT_SUCCESS, ITEM_INTERACT_BLOCKING, ITEM_INTERACT_SKIP_TO_ATTACK]>;
     item_pre_attack: (
         source: S extends Byond.Obj.Item ? S : never,
         target: Byond.Atom,
@@ -136,6 +149,11 @@ type COMSIG_BLOCK_RELAYMOVE = 1;
 
 // item_pre_attack
 type COMPONENT_CANCEL_ATTACK_CHAIN = 1;
+
+// item_interacting_with_atom
+type ITEM_INTERACT_SUCCESS = 1;
+type ITEM_INTERACT_BLOCKING = 2;
+type ITEM_INTERACT_SKIP_TO_ATTACK = 4;
 
 // ctrl_click
 type CLICK_ACTION_SUCCESS = 1;

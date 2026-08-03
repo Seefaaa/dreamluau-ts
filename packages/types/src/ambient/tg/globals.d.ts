@@ -90,6 +90,42 @@ declare interface GlobalProcs {
 
     message_admins(msg: string): void;
 
+    /**
+     * Makes a given atom explode.
+     *
+     * Arguments:
+     * - [origin][/atom]: The atom that's exploding.
+     * - devastation_range: The range at which the effects of the explosion are at their strongest.
+     * - heavy_impact_range: The range at which the effects of the explosion are relatively severe.
+     * - light_impact_range: The range at which the effects of the explosion are relatively weak.
+     * - flash_range: The range at which the explosion flashes people.
+     * - adminlog: Whether to log the explosion/report it to the administration.
+     * - ignorecap: Whether to ignore the relevant bombcap. Defaults to FALSE.
+     * - flame_range: The range at which the explosion should produce hotspots.
+     * - silent: Whether to generate/execute sound effects.
+     * - smoke: Whether to generate a smoke cloud provided the explosion is powerful enough to warrant it.
+     * - protect_epicenter: Whether to leave the epicenter turf unaffected by the explosion
+     * - explosion_cause: [Optional] The atom that caused the explosion, when different to the origin. Used for logging.
+     * - explosion_direction: The angle in which the explosion is pointed (for directional explosions.)
+     * - explosion_arc: The angle of the arc covered by a directional explosion (if 360 the explosion is non-directional.)
+     */
+    explosion(
+        origin: Byond.Atom,
+        devastation_range?: number,
+        heavy_impact_range?: number,
+        light_impact_range?: number,
+        flame_range?: number,
+        flash_range?: number,
+        adminlog?: Byond.Bool | boolean,
+        ignorecap?: Byond.Bool | boolean,
+        silent?: Byond.Bool | boolean,
+        smoke?: Byond.Bool | boolean,
+        protect_epicenter?: Byond.Bool | boolean,
+        explosion_cause?: Byond.Atom,
+        explosion_direction?: number,
+        explosion_arc?: number
+    ): void;
+
     key_name_admin(
         whom: Byond.Mob | Byond.Client | string | Byond.Datum.Mind | Byond.Atom | Byond.Datum,
         include_name?: Byond.Bool | boolean

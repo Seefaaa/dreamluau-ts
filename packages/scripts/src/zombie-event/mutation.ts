@@ -6,6 +6,7 @@ import { type AbilityBuilder, grantAbility } from "../common/ability";
 import {
     add_trait,
     do_sparks,
+    explosion,
     get_dir,
     get_step,
     has_trait,
@@ -13,17 +14,18 @@ import {
     message_admins,
     pick_list,
     playsound,
-    prob,
     ref,
     remove_trait,
     to_chat,
     turn,
 } from "../common/globals";
 import { getReadablePerfStat, sleepingAt, timeAvg, totalCallCount, totalTimeTaken } from "../common/perf";
+import { isAdmin, pickRandom } from "../common/utils";
+import { icon } from "../common/web-loader";
 import { damageTypes } from "./constants";
 import { controllerSay, makeZombieController } from "./controller";
 import { foamSpawner } from "./fluid";
-import { tankRoarSounds } from "./sounds";
+import { tankDeathSound, tankFootstepSound, tankRoarSounds } from "./sounds";
 import { createHref, isZombieSpecies } from "./utils";
 
 // #region Zombie Classes
@@ -33,7 +35,7 @@ export const zombieClasses = {
         human: true,
         abilities: [],
         onGain: (mutation: MutationData) => {
-            registerClassSignal(mutation, "atom_entered", (source, arrived) => {
+            registerClassSignal(mutation, mutation.mob, "atom_entered", (source, arrived) => {
                 if (has_trait(arrived, "zs_zombie_cure")) {
                     SS13.set_timeout(0, () => {
                         const infection = source.get_organ_slot("zombie_infection");
@@ -45,11 +47,11 @@ export const zombieClasses = {
                             );
                         }
                         source.set_tox_loss(0);
-                        // SS13.qdel(arrived); // cant inside a signal
+                        SS13.qdel(arrived); // cant inside a signal?
                     });
                 }
             });
-            registerClassSignal(mutation, "carbon_gain_organ", (_source, organ) => {
+            registerClassSignal(mutation, mutation.mob, "carbon_gain_organ", (_source, organ) => {
                 if (SS13.istype(organ, "/obj/item/organ/zombie_infection")) {
                     organ.organ_flags = _G.bit32.bor(organ.organ_flags, 768); // unremovable (256) | hidden (512)
                 }
@@ -71,8 +73,13 @@ export const zombieClasses = {
         },
     },
     Zombie: {
-        derived: "Zombie (AI)",
+        slowdown: 0.75,
+        slowdownRandom: 0.5,
+        damageResist: -60,
+        noRevive: true,
         aiEnabled: false,
+        notSpecial: true,
+        traits: ["nohardcrit", "nosoftcrit"],
     },
     "Zombie (AI)": {
         slowdown: 0.75,
@@ -91,15 +98,112 @@ export const zombieClasses = {
                     mutation.mob.ghostize(true);
                 });
             }
+
+            const head = mutation.mob.get_bodypart("head");
+            if (head) head.bodypart_flags = _G.bit32.bor(head.bodypart_flags, 1); // adds unremoveable (1)
+
+            registerClassSignal(mutation, mutation.mob, "atom_entered", (source, arrived) => {
+                if (has_trait(arrived, "zs_zombie_cure")) {
+                    SS13.set_timeout(0, () => {
+                        if (source.stat !== 4) {
+                            source.death();
+                        }
+
+                        source.notify_revival("You are being unzombified!");
+                        source.grab_ghost();
+
+                        if (mutation.zombieAi) {
+                            // mutation.zombieAi.stop();
+                            mutation.zombieAi = undefined;
+                        }
+
+                        const infection = source.get_organ_slot("zombie_infection");
+
+                        if (SS13.is_valid(infection)) {
+                            SS13.qdel(infection);
+                            to_chat(
+                                source,
+                                "<span class='notice'>You feel a wave of relief and tranquility, and your mind feels clear.</span>"
+                            );
+                        }
+
+                        SS13.qdel(arrived); // cant inside a signal?
+
+                        setClass(mutation, "Non-Zombie");
+                    });
+                }
+            });
         },
-        onLoss: (mutation: MutationData) => {},
+        onLoss: (mutation: MutationData) => {
+            if ("zombieAi" in mutation && mutation.zombieAi) {
+                // mutation.zombieAi.stop();
+                // mutation.zombieAi = undefined;
+            }
+            if (SS13.is_valid(mutation.mob)) {
+                const head = mutation.mob.get_bodypart("head");
+                if (head) head.bodypart_flags = _G.bit32.band(head.bodypart_flags, _G.bit32.bnot(1)); // removes unremoveable (1)
+            }
+        },
     },
     Boomer: {
         abilities: ["bomber_explode", "boomer_spew"],
         traits: ["nohardcrit", "nosoftcrit"],
-        explode: (mutation: MutationData, gibbed: boolean, extraRange: number) => {},
-        onGain: () => {},
-        onLoss: (mutation: MutationData) => {},
+        onGain: (mutation: MutationData) => {
+            setAppearance(mutation, "boomer");
+
+            mutation.mob.resistance_flags = 48; // unacidable (16) | acidproof (32)
+
+            registerClassSignal(mutation, mutation.mob, "living_death", (_source, gibbed) => {
+                SS13.set_timeout(0, () => {
+                    const classDef = mutation.class && zombieClasses[mutation.class];
+                    if (classDef && "explode" in classDef) classDef.explode(mutation, gibbed === 1, 1);
+                });
+            });
+
+            registerClassSignal(mutation, mutation.mob, "atom_expose_reagents", (_source, reagents) => {
+                for (const [reagent] of reagents) {
+                    if (SS13.istype(reagent, "/datum/reagent/blob/networked_fibers")) {
+                        return 1;
+                    }
+                }
+            });
+        },
+        onLoss: (mutation: MutationData) => {
+            resetAppearance(mutation);
+            mutation.mob.resistance_flags = 0;
+        },
+        explode: (mutation: MutationData, gibbed: boolean, extraRange: number) => {
+            if (!SS13.is_valid(mutation.mob)) return;
+
+            playsound(mutation.mob, "sound/effects/splat.ogg", 100, true);
+
+            const position = assert(mutation.mob.drop_location());
+            makeHearersVulnerable(position);
+
+            if (!gibbed) mutation.mob.gib();
+
+            explosion(position, 0, 0, 2, 0, 5);
+
+            const foo = SS13.new("/datum/effect_system/fluid_spread/foam/short", position, extraRange + 1);
+            foo.chemholder.add_reagent(SS13.type("/datum/reagent/blob/networked_fibers"), 15);
+            // foo.color = "#5050FF";
+            foo.start();
+        },
+    },
+    Jockey: {
+        slowdown: -1.5,
+        damage: 11,
+        noRevive: true,
+        abilities: ["jockey_leap"],
+        traits: ["passtable", "ventcrawler_always", "nohardcrit", "nosoftcrit"],
+        onGain: (mutation: MutationData) => {
+            setAppearance(mutation, "jockey");
+            mutation.mob.pass_flags = 1; // passtable
+        },
+        onLoss: (mutation: MutationData) => {
+            resetAppearance(mutation);
+            mutation.mob.pass_flags = 0;
+        },
     },
     Smoker: {
         damage: 31,
@@ -108,16 +212,104 @@ export const zombieClasses = {
         traits: ["nohardcrit", "nosoftcrit"],
         noRevive: true,
         onGain: (mutation: MutationData) => {
-            // setIcon(mutation, "smoker");
+            setAppearance(mutation, "smoker");
         },
         onLoss: (mutation: MutationData) => {
-            // resetIcon(mutation);
+            resetAppearance(mutation);
         },
     },
     Tank: {
+        slowdown: 0,
+        damage: 30,
         demolitionMod: 6,
+        damageResist: 50,
+        noRevive: true,
+        traits: [
+            "ignoredamageslowdown",
+            "shock_immunity",
+            "push_immunity",
+            "stun_immunity",
+            "baton_resistance",
+            "resist_high_pressure",
+            "resist_low_pressure",
+            "bomb_immunity",
+            "rad_immunity",
+            "no_blood_overlay",
+            "no_stagger",
+            "noslip_all",
+            "noflash",
+            "nohardcrit",
+            "nosoftcrit",
+        ],
+        abilities: ["tank_roar"],
+        onGain: (mutation: MutationData) => {
+            setAppearance(mutation, "tank");
+
+            const sound = pickRandom(tankRoarSounds);
+            playsound(mutation.mob, sound, 80, true, 15, 1.5, undefined, 0, true, true, 8);
+
+            for (const [, hand] of mutation.mob.held_items) {
+                if (!SS13.istype(hand, "/obj/item/mutant_hand/zombie")) continue;
+
+                registerClassSignal(mutation, hand, "item_afterattack", (_source, target, user) => {
+                    if (!SS13.istype(target, "/mob/living")) return;
+
+                    const turf = SS13.get_turf(user);
+                    const dir = get_dir(user, target);
+
+                    let targetTurf = turf;
+
+                    for (const _ of $range(1, 8)) {
+                        targetTurf = get_step(targetTurf, dir);
+                    }
+
+                    target.Knockdown(20);
+                    target.throw_at(targetTurf, 8, 2);
+                });
+
+                registerClassSignal(mutation, hand, "item_interacting_with_atom", (_source, _user, interactingWith) => {
+                    if (!SS13.istype(interactingWith, "/turf/closed/wall")) return;
+                    mutation.mob.UnarmedAttack(interactingWith, 1);
+                    return 1;
+                });
+
+                let steps = 0;
+                let nextPlay = 0;
+
+                mutation.mob._RemoveElement([SS13.type("/datum/element/footstep"), "footstep_human", 1, -6]);
+
+                registerClassSignal(mutation, mutation.mob, "movable_moved", (_source, _old_loc, _direction) => {
+                    if (mutation.mob.body_position === 1) return;
+
+                    const worldTime = dm.world.time;
+
+                    if (++steps < 2 || nextPlay > worldTime) return;
+
+                    nextPlay = worldTime + 6;
+
+                    const sound = pickRandom(tankFootstepSound);
+                    playsound(mutation.mob, sound, 20, true, 15, 1.5, undefined, 0, true, true, 8);
+
+                    steps = 0;
+                });
+
+                registerClassSignal(mutation, mutation.mob, "living_death", (_source, _gibbed) => {
+                    const sound = pickRandom(tankDeathSound);
+                    playsound(mutation.mob, sound, 40, true, 15, 1.5, undefined, 0, true, true, 8);
+                });
+
+                mutation.mob._AddElement([SS13.type("/datum/element/wall_tearer"), true, 80, 3]);
+
+                mutation.mob.status_flags = 0;
+            }
+        },
+        onLoss: (mutation: MutationData) => {
+            resetAppearance(mutation);
+            mutation.mob._AddElement([SS13.type("/datum/element/footstep"), "footstep_human", 1, -6]);
+            mutation.mob._RemoveElement([SS13.type("/datum/element/wall_tearer"), true, 80, 3]);
+            mutation.mob.status_flags = 15;
+        },
     },
-    Jockey: {},
 } as const satisfies Record<string, ZombieClass>;
 
 export type ZombieClassName = keyof typeof zombieClasses;
@@ -125,8 +317,8 @@ export type ZombieClassName = keyof typeof zombieClasses;
 export type ZombieClass = {
     traits?: string[];
     abilities?: (keyof typeof zombieAbilities)[];
-    onGain?: (mutation: MutationData) => void;
-    onLoss?: (mutation: MutationData) => void;
+    onGain?: (this: void, mutation: MutationData) => void;
+    onLoss?: (this: void, mutation: MutationData) => void;
 } & {
     damage?: number;
     slowdown?: number;
@@ -302,9 +494,9 @@ const zombieAbilities = {
         abilityType: "normal",
         cooldown: 15,
         onActivate(context) {
-            // biome-ignore lint/style/noNonNullAssertion: random is in bounds
-            const sound = tankRoarSounds[math.random(tankRoarSounds.length)]!;
+            const sound = pickRandom(tankRoarSounds);
             playsound(context.mob, sound, 100);
+
             SS13.set_timeout(0, () => {
                 context.mob.emote("me", 1, "roars!", true);
             });
@@ -317,9 +509,12 @@ const zombieAbilities = {
         icon_state: "jetboot",
         abilityType: "targeted",
         cooldown: 15,
-        onActivate(context, _action) {
-            if ("riding" in context && SS13.is_valid(context.riding)) return 1;
+        onActivate(context, _action, target) {
+            if ("riding" in context && context.riding && SS13.is_valid(context.riding)) return 1;
+
             SS13.set_timeout(0, () => {
+                if (!SS13.is_valid(context.mob)) return 1;
+
                 playsound(context.mob, "sound/weapons/fwoosh.ogg", 100, true);
 
                 HandlerGroup.register_once(context.mob, "movable_pre_impact", (zombie, victim) => {
@@ -418,6 +613,14 @@ const zombieAbilities = {
 
                     return 0;
                 });
+
+                context.mob.throw_at(target, 5, 3, context.mob, false, false, undefined, 2_000, true);
+
+                SS13.set_timeout(5, () => {
+                    if (SS13.is_valid(context.mob)) {
+                        SS13.unregister_signal(context.mob, "movable_pre_impact");
+                    }
+                });
             });
         },
     },
@@ -443,19 +646,14 @@ export type MutationData = {
     riding?: Byond.Atom.Movable;
 
     // transformation data
-    cleanup: (MutationSignalHandler | ((...args: any[]) => void))[];
+    cleanup: (
+        | { target: Byond.Datum; signal: keyof SignalRegistry; callback: (...args: any[]) => any }
+        | ((...args: any[]) => void)
+    )[];
     oldSpecies?: Byond.Type<Byond.Datum.Species>;
     oldVoice?: string;
     antagDatum?: Byond.Datum.Antagonist;
-};
-
-type MutationSignalHandler<
-    D extends Byond.Datum = Byond.Mob.Living.Carbon.Human,
-    S extends keyof SignalRegistry<D> = keyof SignalRegistry<D>,
-> = {
-    target: D;
-    signal: S;
-    callback: SignalRegistry<D>[S];
+    overlay?: Byond.MutableAppearance; // overlay for the zombie class (tank), if any
 };
 
 function makeHearersVulnerable(position: Byond.Atom) {
@@ -481,14 +679,14 @@ function makeHearersVulnerable(position: Byond.Atom) {
     });
 }
 
-function infectTarget(human: Byond.Mob.Living.Carbon.Human, defType?: string) {
+/**
+ * Inserts a zombie infection organ into the specified human mob if they do not already have one.
+ *
+ * @param human The human mob to infect with a zombie infection organ.
+ */
+function infectTarget(human: Byond.Mob.Living.Carbon.Human) {
     if (SS13.is_valid(human.get_organ_slot("zombie_infection"))) {
         return;
-    }
-
-    if (defType !== "bypass") {
-        const armor = human.getarmor(defType, "bio");
-        if (prob(armor)) return;
     }
 
     const infection = SS13.new("/obj/item/organ/zombie_infection");
@@ -501,9 +699,9 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
 
     // #region Revert previous effects
 
-    const previous = mutation.class && zombieClasses[mutation.class];
+    const previousClass = mutation.class && zombieClasses[mutation.class];
 
-    if (previous && "onLoss" in previous) previous.onLoss(mutation);
+    if (previousClass && "onLoss" in previousClass) previousClass.onLoss(mutation);
 
     // run cleanup callbacks
     for (const registered of mutation.cleanup) {
@@ -513,8 +711,8 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
     mutation.cleanup = [];
 
     // remove traits
-    if (previous && "traits" in previous && previous.traits.length > 0) {
-        mutation.mob.remove_traits(previous.traits, "zs_class");
+    if (previousClass && "traits" in previousClass && previousClass.traits.length > 0) {
+        mutation.mob.remove_traits(previousClass.traits, "zs_class");
     }
 
     mutation.class = undefined;
@@ -530,7 +728,7 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
         }
     }
 
-    if (previous && "damageResist" in previous) {
+    if (previousClass && "damageResist" in previousClass) {
         const physiology = mutation.mob.physiology;
         for (const damageType of damageTypes) {
             const current = physiology[damageType];
@@ -538,7 +736,7 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
             if (damageType === "siemens_coeff") {
                 physiology[damageType] = current + 0.8;
             } else {
-                physiology[damageType] = current + 0.01 * previous.damageResist;
+                physiology[damageType] = current + 0.01 * previousClass.damageResist;
             }
         }
     }
@@ -549,29 +747,29 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
 
     // #region Apply new effects
 
-    const next = zombieClasses[newClass];
+    const nextClass = zombieClasses[newClass];
 
-    const granted: Byond.Datum.Action.Cooldown[] = [];
+    const grantedAbilities: Byond.Datum.Action.Cooldown[] = [];
 
-    if ("abilities" in next) {
-        for (const ability of next.abilities) {
-            table.insert(granted, grantAbility(mutation.mob, mutation, zombieAbilities[ability]));
+    if ("abilities" in nextClass) {
+        for (const ability of nextClass.abilities) {
+            table.insert(grantedAbilities, grantAbility(mutation.mob, mutation, zombieAbilities[ability]));
         }
     }
 
     table.insert(mutation.cleanup, () => {
-        for (const ability of granted) {
+        for (const ability of grantedAbilities) {
             SS13.qdel(ability);
         }
     });
 
     mutation.class = newClass;
 
-    if ("slowdown" in next) {
-        let slowdown = next.slowdown;
+    if ("slowdown" in nextClass) {
+        let slowdown = nextClass.slowdown;
 
-        if ("slowdownRandom" in next) {
-            let adjusted = math.floor(math.random() * next.slowdownRandom * 1_000) / 1_000;
+        if ("slowdownRandom" in nextClass) {
+            let adjusted = math.floor(math.random() * nextClass.slowdownRandom * 1_000) / 1_000;
             if (math.random(0, 1) === 1) adjusted *= -1;
             slowdown += adjusted;
         }
@@ -584,7 +782,7 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
     }
 
     if (isZombieSpecies(mutation.mob)) {
-        if ("human" in next) {
+        if ("human" in nextClass) {
             if (mutation.oldSpecies) {
                 mutation.mob.set_species(mutation.oldSpecies);
             } else {
@@ -600,14 +798,14 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
             }
         }
     } else {
-        if (!("human" in next)) {
+        if (!("human" in nextClass)) {
             mutation.mob.set_species(SS13.type("/datum/species/zombie/infectious"));
             mutation.oldVoice = mutation.mob.voice;
             mutation.mob.voice = "Man (Big)";
         }
     }
 
-    if (!mutation.antagDatum && !(mutation.spawned || newClass !== "Zombie (AI)") && !("human" in next)) {
+    if (!mutation.antagDatum && !(mutation.spawned || newClass !== "Zombie (AI)") && !("human" in nextClass)) {
         mutation.mob.mind_initialize();
 
         const antag = SS13.new("/datum/antagonist/custom");
@@ -631,16 +829,16 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
 
     if (mutation.antagDatum) {
         mutation.antagDatum.name = newClass;
-        mutation.antagDatum.antagpanel_category = "notSpecial" in next ? "Infected" : "Special Infected";
+        mutation.antagDatum.antagpanel_category = "notSpecial" in nextClass ? "Infected" : "Special Infected";
     }
 
-    const demolitionMod = "demolitionMod" in next ? next.demolitionMod : 2;
+    const demolitionMod = "demolitionMod" in nextClass ? nextClass.demolitionMod : 2;
 
     if (isZombieSpecies(mutation.mob)) {
         for (const [, hand] of mutation.mob.held_items) {
             if (!SS13.istype(hand, "/obj/item/mutant_hand/zombie")) continue;
 
-            if ("damage" in next) hand.force = next.damage;
+            if ("damage" in nextClass) hand.force = nextClass.damage;
             hand.demolition_mod = demolitionMod;
 
             SS13.unregister_signal(hand, "item_pre_attack");
@@ -678,7 +876,7 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
         const infection = mutation.mob.get_organ_slot("zombie_infection");
 
         if (SS13.is_valid(infection)) {
-            if ("noRevive" in next) {
+            if ("noRevive" in nextClass) {
                 if (infection.old_species) {
                     mutation.oldSpecies = infection.old_species;
                 }
@@ -691,11 +889,11 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
         mutation.mob.remove_traits(["nodeath"], "species");
     }
 
-    if ("traits" in next) {
-        mutation.mob.add_traits(next.traits, "zs_class");
+    if ("traits" in nextClass) {
+        mutation.mob.add_traits(nextClass.traits, "zs_class");
     }
 
-    if ("damageResist" in next) {
+    if ("damageResist" in nextClass) {
         const physiology = mutation.mob.physiology;
         for (const damageType of damageTypes) {
             const current = physiology[damageType];
@@ -703,42 +901,53 @@ export function setClass(mutation: MutationData, newClass: keyof typeof zombieCl
             if (damageType === "siemens_coeff") {
                 physiology[damageType] = current - 0.8;
             } else {
-                physiology[damageType] = current - 0.01 * next.damageResist;
+                physiology[damageType] = current - 0.01 * nextClass.damageResist;
             }
         }
     }
 
-    if ("onGain" in next) next.onGain(mutation);
+    if ("onGain" in nextClass) nextClass.onGain(mutation);
 
     // #endregion
 }
 
 // #region Helpers
 
-function registerClassSignal<S extends keyof SignalRegistry<Byond.Mob.Living.Carbon.Human>>(
-    mutation: MutationData,
-    signal: S,
-    callback: SignalRegistry<Byond.Mob.Living.Carbon.Human>[S]
-) {
-    SS13.register_signal(mutation.mob, signal, callback);
-    table.insert(mutation.cleanup, {
-        target: mutation.mob,
-        signal,
-        callback,
-    });
-}
-function registerClassSignal2<S extends keyof SignalRegistry<Byond.Mob.Living.Carbon.Human>>(
+function registerClassSignal<T extends Byond.Datum, S extends keyof SignalRegistry<T>>(
     humanData: MutationData,
-    target: Byond.Mob.Living.Carbon.Human,
+    target: T,
     signal: S,
-    callback: SignalRegistry<Byond.Mob.Living.Carbon.Human>[S]
+    callback: SignalRegistry<T>[S]
 ) {
     SS13.register_signal(target, signal, callback);
-    table.insert(humanData.cleanup, {
-        target,
-        signal,
-        callback,
-    });
+    table.insert(humanData.cleanup, { target, signal, callback });
+}
+
+const appearanceCache: Record<string, Byond.MutableAppearance> = {};
+
+function setAppearance(mutation: MutationData, state: string) {
+    let appearance = appearanceCache[state];
+
+    if (!appearance) {
+        appearance = SS13.new("/mutable_appearance");
+        appearance.icon = icon(
+            "https://raw.githubusercontent.com/tgstation/auxlua-cookbook/master/waltermeldron/assets/zombie/zombie.dmi"
+        );
+        appearance.icon_state = state;
+        appearance.appearance_flags = 837;
+        appearanceCache[state] = appearance;
+    }
+
+    mutation.mob.alpha = 0;
+    mutation.mob.add_overlay(appearance);
+    mutation.overlay = appearance;
+}
+
+function resetAppearance(mutation: MutationData) {
+    if (mutation.overlay) {
+        mutation.mob.alpha = 255;
+        mutation.mob.cut_overlay(mutation.overlay);
+    }
 }
 
 // #endregion
@@ -770,6 +979,15 @@ export function createCureInjector(location: Byond.Atom) {
 
 // #endregion
 
+// #region Zombie Mutation Setup
+
+/**
+ * Sets up the zombie mutation for a given human mob. It initializes the mutation data, registers
+ * necessary signals,and sets the initial class based on the human's species.
+ *
+ * @param human The human mob for which the zombie mutation is being set up.
+ * @returns The initialized mutation data for the human mob.
+ */
 export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): MutationData {
     const humanRef = ref(human);
 
@@ -782,7 +1000,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
         cleanup: [],
     };
 
-    if (isLocal && human.ckey === admin) {
+    if (isLocal && human.ckey === runner) {
         setClass(mutation, localClass);
     } else {
         if (isZombieSpecies(human)) setClass(mutation, "Zombie");
@@ -792,16 +1010,15 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
     allMutations[humanRef] = mutation;
 
     SS13.unregister_signal(human, "atom_examine");
-    SS13.unregister_signal(human, "handle_topic");
-    SS13.unregister_signal(human, "ctrl_click");
     SS13.unregister_signal(human, "species_gain");
     SS13.unregister_signal(human, "species_loss");
     SS13.unregister_signal(human, "parent_preqdeleted");
+    SS13.unregister_signal(human, "handle_topic");
 
     SS13.register_signal(human, "atom_examine", (_source, examiner, examination) => {
-        const isAdmin = examiner.ckey === admin;
+        const admin = isAdmin(examiner);
 
-        if (isAdmin || SS13.istype(examiner, "/mob/dead")) {
+        if (admin || SS13.istype(examiner, "/mob/dead")) {
             list.add(examination, `<hr/><span class='notice'>Zombie Class: ${mutation.class}</span>`);
 
             const infection = human.get_organ_slot("zombie_infection");
@@ -809,7 +1026,8 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
 
             list.add(examination, `<span class='notice'>Infection Status: ${status}</span>`);
 
-            if (isAdmin) {
+            if (admin) {
+                list.add(examination, `<span class='notice'>${createHref(human, "set_class=1", "Set class")}</span>`);
                 list.add(
                     examination,
                     `<span class='notice'>${createHref(human, "settings=1", "Open settings menu")}</span>`
@@ -818,33 +1036,6 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
 
             list.add(examination, "<hr/>");
         }
-    });
-
-    let isUiOpen = false;
-
-    SS13.register_signal(human, "ctrl_click", (_source, user) => {
-        if (isUiOpen || user.ckey !== admin) return;
-
-        SS13.set_timeout(0, () => {
-            const classList: string[] = [];
-
-            for (const className in zombieClasses) {
-                table.insert(classList, className);
-            }
-
-            if (classList.length === 0) return;
-
-            isUiOpen = true;
-
-            const [choice] = SS13.await(SS13.global_proc, "tgui_input_list", user, "Set class", "Set class", classList);
-
-            isUiOpen = false;
-
-            if (!choice || !(choice in zombieClasses)) return;
-            if (!SS13.is_valid(user) || !SS13.is_valid(human)) return;
-
-            setClass(mutation, choice as ZombieClassName);
-        });
     });
 
     SS13.register_signal(human, "species_gain", (_source, species) => {
@@ -888,7 +1079,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
     });
 
     SS13.register_signal(human, "handle_topic", (_source, user, hrefList) => {
-        if (user.ckey !== admin) return;
+        if (!isAdmin(user)) return;
 
         SS13.set_timeout(0, () => {
             let refresh = false;
@@ -955,7 +1146,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                     const hitLimit = (location: Byond.Atom) => {
                         let count = 0;
                         for (const [, obj] of list.filter(location.contents, "/obj/item/implanter")) {
-                            if (SS13.is_valid(obj.imp) && has_trait(obj.imp, "zs_zombie_cure")) count++;
+                            if (SS13.is_valid(obj.imp) && has_trait(obj.imp, "zs_zombie_cure")) count += 1;
                         }
                         return count >= 5;
                     };
@@ -998,6 +1189,8 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                 spawner.pixel_y = -4;
 
                 if (!destructibleSpawners) {
+                    // lavaproof (1) | fireproof (2) | unacidable (16) | acidproof (32)
+                    // indestructible (64) | freezeproof (128) | shuttlecrushproof (256)
                     spawner.resistance_flags = 499;
                 }
 
@@ -1020,7 +1213,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                             `The mode is looking for volunteers to become a ${className}.`,
                             undefined,
                             undefined,
-                            300,
+                            100,
                             undefined,
                             undefined,
                             spawner,
@@ -1089,14 +1282,12 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                     SS13.end_loop(loop);
                 });
 
-                SS13.register_signal(spawner, "ctrl_click", (_source, user) => {
-                    if (user.ckey !== admin) return;
-
-                    SS13.set_timeout(0, () => spawn(true, true));
-                });
-
                 SS13.register_signal(spawner, "atom_examine", (_source, examiner, examination) => {
-                    if (examiner.ckey === admin) {
+                    if (isAdmin(examiner)) {
+                        list.add(
+                            examination,
+                            `<span class='notice'>${createHref(spawner, "spawn=1", "Spawn zombie")}</span>`
+                        );
                         list.add(
                             examination,
                             `<span class='notice'>${createHref(spawner, "spawn_special=1", "Spawn special")}</span>`
@@ -1105,10 +1296,11 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                 });
 
                 SS13.register_signal(spawner, "handle_topic", (_source, user, hrefList) => {
-                    if (user.ckey !== admin) return;
+                    if (!isAdmin(user)) return;
 
                     SS13.set_timeout(0, () => {
-                        if ("spawn_special" in hrefList) spawn(true, true);
+                        if ("spawn" in hrefList) spawn(true, false);
+                        else if ("spawn_special" in hrefList) spawn(true, true);
                     });
                 });
             } else if ("message_controllers" in hrefList) {
@@ -1122,6 +1314,28 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                 if (!message) return;
 
                 controllerSay(user, message, true, "Controller Overseer");
+            } else if ("set_class" in hrefList) {
+                const classList: string[] = [];
+
+                for (const className in zombieClasses) {
+                    table.insert(classList, className);
+                }
+
+                if (classList.length === 0) return;
+
+                const [choice] = SS13.await(
+                    SS13.global_proc,
+                    "tgui_input_list",
+                    user,
+                    "Set class",
+                    "Set class",
+                    classList
+                );
+
+                if (!choice || !(choice in zombieClasses)) return;
+                if (!SS13.is_valid(user) || !SS13.is_valid(human)) return;
+
+                setClass(mutation, choice as ZombieClassName);
             }
 
             if (refresh || "settings" in hrefList || "refresh" in hrefList) {
@@ -1133,6 +1347,17 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
     return mutation;
 }
 
+// #endregion
+
+// #region Zombie Settings Menu
+
+/**
+ * Shows the zombie settings menu to the specified user. The menu displays various options for managing
+ * zombie-related settings, sending messages to controllers, spawning cure crates, and toggling zombie spawning settings.
+ *
+ * @param user The user who will see the zombie settings menu.
+ * @param mutation Mutation data of any mob, only used to send hrefs, has nothing to do with the data itself.
+ */
 function openZombieSettings(user: Byond.Mob, mutation: MutationData) {
     const browser = SS13.new("/datum/browser", user, "SettingsMenu", "Settings Menu", 300, 400);
 
@@ -1205,3 +1430,5 @@ const label = (label: string, content: string): string =>
     `<div style='display: flex; margin-top: 4px;'><div style='flex-grow: 1; color: #98B0C3;'>${label}:</div><div>${content}</div></div>`;
 
 const totalZombieAi = 0;
+
+// #endregion

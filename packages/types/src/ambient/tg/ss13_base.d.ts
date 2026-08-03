@@ -17,7 +17,7 @@ declare module "SS13_base" {
 
     export function get_runner_ckey(): string;
 
-    export function get_runner_client(): Byond.Datum;
+    export function get_runner_client(): Byond.Client;
 
     export function ispath(thing: Byond.Type, path: Byond.Type): boolean;
 

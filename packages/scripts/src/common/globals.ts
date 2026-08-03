@@ -20,6 +20,7 @@ export const get_dir = dm.global_procs._get_dir;
 export const turn = dm.global_procs._turn;
 export const playsound = dm.global_procs.playsound;
 export const do_sparks = dm.global_procs.do_sparks;
+export const explosion = dm.global_procs.explosion;
 
 export function isSpecies<T extends PathsOf<Byond.Datum.Species>>(
     mob: Byond.Mob.Living.Carbon.Human,

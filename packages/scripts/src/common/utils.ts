@@ -1,3 +1,4 @@
+import * as SS13 from "SS13";
 import { locate } from "./globals";
 
 /**
@@ -11,4 +12,15 @@ export function rangeTurfs(location: Byond.Atom, radius: number): Byond.List<num
     const y = location.y;
     const z = location.z;
     return dm.global_procs._block(locate(x - radius, y - radius, z), locate(x + radius, y + radius, z));
+}
+
+export function isAdmin(mob: Byond.Mob): boolean {
+    const client = mob.client;
+    if (!SS13.is_valid(client)) return false;
+    return SS13.is_valid(client.holder);
+}
+
+export function pickRandom<T>(array: [T, T, ...T[]]): T {
+    // biome-ignore lint/style/noNonNullAssertion: random index is guaranteed to be valid since the array has at least one element
+    return array[math.random(0, array.length - 1)]!;
 }

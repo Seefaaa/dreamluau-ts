@@ -82,12 +82,29 @@ declare namespace Byond {
             target: Byond.Datum,
             sig_type_or_types: keyof SignalRegistry | readonly (keyof SignalRegistry)[]
         ): void;
+
+        /** Finds the singleton for the element type given and attaches it to src */
+        _AddElement(
+            this: Byond.Datum,
+            arguments: Byond.List<number, any> | [Byond.Type<Byond.Datum.Element>, ...any[]]
+        ): void;
+
+        /**
+         * Finds the singleton for the element type given and detaches it from src
+         * You only need additional arguments beyond the type if you're using [ELEMENT_BESPOKE]
+         */
+        _RemoveElement(
+            this: Byond.Datum,
+            arguments: Byond.List<number, any> | [Byond.Type<Byond.Datum.Element>, ...any[]]
+        ): void;
     }
 
     namespace Datum {
         class ThrownThing extends Byond.Datum {}
 
         class Callback extends Byond.Datum {}
+
+        class Admins extends Byond.Datum {}
 
         /**
          * A weakref holds a non-owning reference to a datum.
@@ -404,6 +421,36 @@ declare namespace Byond {
 
                 namespace SparkSpread {
                     class Quantum extends Byond.Datum.EffectSystem.Basic.SparkSpread {}
+                }
+            }
+
+            /**
+             * A factory which produces fluid groups.
+             */
+            class FluidSpread extends Byond.Datum.EffectSystem {
+                start(this: Byond.Datum.EffectSystem.FluidSpread, log?: Byond.Bool | boolean): void;
+            }
+
+            namespace FluidSpread {
+                /** A factory for foam fluid floods. */
+                class Foam extends Byond.Datum.EffectSystem.FluidSpread {
+                    /** A container for all of the chemicals we distribute through the foam. */
+                    chemholder: Byond.Datum.Reagents;
+                    /** The amount that we multiply the payload by */
+                    reagent_scale: number;
+                    /** What type of thing the foam should leave behind when it dissipates. */
+                    result_type: Byond.Type<Byond.Atom.Movable> | undefined;
+
+                    start(
+                        this: Byond.Datum.EffectSystem.FluidSpread.Foam,
+                        log?: Byond.Bool | boolean,
+                        lifetime?: number,
+                        slippery?: Byond.Bool | boolean
+                    ): void;
+                }
+
+                namespace Foam {
+                    class Short extends Byond.Datum.EffectSystem.FluidSpread.Foam {}
                 }
             }
         }
@@ -863,6 +910,8 @@ declare namespace Byond {
             ): void;
 
             transfer_to(this: Byond.Datum.Mind, new_character: Byond.Mob, force_key_move?: Byond.Bool | boolean): void;
+
+            grab_ghost(this: Byond.Datum.Mind, force?: Byond.Bool | boolean): Byond.Mob.Dead.Observer | undefined;
         }
 
         class Team extends Byond.Datum {}
@@ -970,6 +1019,24 @@ declare namespace Byond {
 
         class Armor extends Byond.Datum {}
 
+        class Element extends Byond.Datum {}
+
+        namespace Element {
+            class WallTearer extends Byond.Datum.Element {}
+
+            class Footstep extends Byond.Datum.Element {}
+        }
+
+        class StatusEffect extends Byond.Datum {}
+
+        namespace StatusEffect {
+            class Incapacitating extends Byond.Datum.StatusEffect {}
+
+            namespace Incapacitating {
+                class Knockdown extends Byond.Datum.StatusEffect.Incapacitating {}
+            }
+        }
+
         class FluidGroup extends Byond.Datum {
             /**
              * The set of fluid objects currently in this group.
@@ -986,6 +1053,11 @@ declare namespace Byond {
         }
     }
 
+    interface Client {
+        /** Contains admin info. Null if client is not an admin. */
+        holder: Byond.Datum.Admins | undefined;
+    }
+
     interface Mob {
         /** What is the mobs real name (name is overridden for disguises etc) */
         real_name: string;
@@ -998,6 +1070,9 @@ declare namespace Byond {
         next_click: number;
 
         mind: Byond.Datum.Mind | undefined;
+
+        /** bitflags defining which status effects can be inflicted (replaces canknockdown, canstun, etc) */
+        status_flags: Bitflags.Status;
 
         /**
          * Whether a mob is alive or dead. TODO: Move this to living - Nodrak (2019, still here)
@@ -1040,7 +1115,6 @@ declare namespace Byond {
             multiplicative_slowdown?: number
         ): Byond.Datum.MoveSpeedModifier;
 
-        get_organ_slot(this: Byond.Mob, slot: "zombie_infection"): Byond.Obj.Item.Organ.ZombieInfection | undefined;
         get_organ_slot(this: Byond.Mob, slot: string): Byond.Obj.Item.Organ | undefined;
 
         /**
@@ -1138,6 +1212,41 @@ declare namespace Byond {
             can_reenter_corpse?: Byond.Bool | boolean,
             forced?: Byond.Bool | boolean
         ): Byond.Mob.Dead.Observer | undefined;
+
+        /** Force get the ghost from the mind */
+        grab_ghost(this: Byond.Mob, force?: Byond.Bool | boolean): Byond.Mob.Dead.Observer | undefined;
+
+        /** Notify a ghost that its body is being revived */
+        notify_revival(
+            this: Byond.Mob,
+            message?: string,
+            sound?: Byond.Sound | string,
+            source?: Byond.Atom,
+            flashwindow?: Byond.Bool | boolean
+        ): Byond.Mob.Dead.Observer | undefined;
+
+        /**
+         * UnarmedAttack: The higest level of mob click chain discounting click itself.
+         *
+         * This handles, just "clicking on something" without an item. It translates
+         * into [atom/proc/attack_hand], [atom/proc/attack_animal] etc.
+         *
+         * Note: proximity_flag here is used to distinguish between normal usage (flag=1),
+         * and usage when clicking on things telekinetically (flag=0).  This proc will
+         * not be called at ranged except with telekinesis.
+         *
+         * proximity_flag is not currently passed to attack_hand, and is instead used
+         * in human click code to allow glove touches only at melee range.
+         *
+         * modifiers is a lazy list of click modifiers this attack had,
+         * used for figuring out different properties of the click, mostly right vs left and such.
+         */
+        UnarmedAttack(
+            this: Byond.Mob,
+            target: Byond.Atom,
+            proximity_flag?: Byond.Bool | boolean,
+            modifiers?: Byond.List<string, any>
+        ): void;
     }
 
     namespace Mob {
@@ -1153,6 +1262,50 @@ declare namespace Byond {
             mobility_flags: Bitflags.Mobility;
 
             getarmor(this: Byond.Mob.Living, defType: string | undefined, type: string): number;
+
+            /**
+             * Called when the mob dies. Can also be called manually to kill a mob.
+             *
+             * Arguments:
+             * * gibbed - Was the mob gibbed?
+             */
+            death(this: Byond.Mob.Living, gibbed?: Byond.Bool | boolean): Byond.Bool;
+
+            /**
+             * Returns a bodypart of the specified zone that this mob has
+             *
+             * * zone: the zone to get.
+             * Defaults to chest, allowing for skilling zone nullchecks if you don't care what bodypart you get.
+             * * include_stumps: whether or not to consider stumps as valid bodyparts to return.
+             * Defaults to FALSE, meaning that if a limb is missing (is a stump), nothing will be returned.
+             *
+             * Returns a bodypart, or null.
+             */
+            get_bodypart(
+                this: Byond.Mob.Living,
+                zone?: Enums.BodyZone,
+                include_stumps?: Byond.Bool | boolean
+            ): Byond.Obj.Item.Bodypart | undefined;
+
+            /**
+             * Blow up the mob into giblets
+             *
+             * drop_bitflags: (see code/__DEFINES/blood.dm)
+             * * DROP_BRAIN - Gibbed mob will drop a brain
+             * * DROP_ORGANS - Gibbed mob will drop organs
+             * * DROP_BODYPARTS - Gibbed mob will drop bodyparts (arms, legs, etc.)
+             * * DROP_ITEMS - Gibbed mob will drop carried items (otherwise they get deleted)
+             * * DROP_ALL_REMAINS - Gibbed mob will drop everything
+             */
+            gib(this: Byond.Mob.Living, drop_bitflags?: Bitflags.Drop): void;
+
+            /** Can't go below remaining duration */
+            Knockdown(
+                this: Byond.Mob.Living,
+                amount: number,
+                daze_amount?: number,
+                ignore_canstun?: Byond.Bool | boolean
+            ): Byond.Datum.StatusEffect.Incapacitating.Knockdown | undefined;
 
             set_tox_loss(
                 this: Byond.Mob.Living,
@@ -1202,6 +1355,28 @@ declare namespace Byond {
         base_icon_state: string | undefined;
 
         resistance_flags: Bitflags.Resistance;
+
+        add_overlay(
+            this: Byond.Atom,
+            overlays:
+                | Byond.List<number, Byond.Atom | Byond.Icon | Byond.Image | Byond.Type | string>
+                | Byond.Atom
+                | Byond.Icon
+                | Byond.Image
+                | Byond.Type
+                | string
+        ): void;
+
+        cut_overlay(
+            this: Byond.Atom,
+            overlays:
+                | Byond.List<number, Byond.Atom | Byond.Icon | Byond.Image | Byond.Type | string>
+                | Byond.Atom
+                | Byond.Icon
+                | Byond.Image
+                | Byond.Type
+                | string
+        ): void;
 
         /**
          * Helper for logging chat messages or other logs with arbitrary inputs (e.g. announcements)
@@ -1604,6 +1779,22 @@ declare namespace Byond {
                 glide_size_override?: number,
                 update_dir?: Byond.Bool | boolean
             ): Byond.Bool | undefined;
+
+            /** If this returns FALSE then callback will not be called. */
+            throw_at(
+                this: Byond.Atom.Movable,
+                target: Byond.Atom,
+                range: number,
+                speed: number,
+                thrower?: Byond.Atom,
+                spin?: Byond.Bool | boolean,
+                diagonals_first?: Byond.Bool | boolean,
+                callback?: Byond.Datum.Callback,
+                force?: number,
+                gentle?: Byond.Bool | boolean,
+                quickstart?: Byond.Bool | boolean,
+                throw_datum_typepath?: Byond.Type<Byond.Datum.ThrownThing>
+            ): Byond.Bool;
         }
 
         namespace Movable {
@@ -1629,6 +1820,13 @@ declare namespace Byond {
         class Item extends Byond.Obj {}
 
         namespace Item {
+            class Bodypart extends Byond.Obj.Item {
+                /**
+                 * Random flags that describe this bodypart
+                 */
+                bodypart_flags: Bitflags.Bodypart;
+            }
+
             class Organ extends Byond.Obj.Item {
                 /**
                  * Random flags that describe this organ
@@ -2361,6 +2559,38 @@ declare namespace Bitflags {
         [Bitflags.Emote.Audible, Bitflags.Emote.Visible, Bitflags.Emote.Important, Bitflags.Emote.RuneChat]
     >;
 
+    namespace Drop {
+        /** Mobs will drop a brain */
+        type Brain = 1;
+        /** Mobs will drop organs */
+        type Organs = 2;
+        /** Mobs will drop bodyparts (arms, legs, etc.) */
+        type Bodyparts = 4;
+        /** Mobs will drop items */
+        type Items = 8;
+    }
+
+    type Drop = Bitflag<[Bitflags.Drop.Brain, Bitflags.Drop.Organs, Bitflags.Drop.Bodyparts, Bitflags.Drop.Items]>;
+
+    namespace Status {
+        /** If set, this mob can be stunned. */
+        type CanStun = 1;
+        /** If set, this mob can be knocked down */
+        type CanKnockdown = 2;
+        /**
+         * If set, this mob can be knocked unconscious via status effect.
+         * NOTE, does not mean immune to sleep. Unconscious and sleep are two different things.
+         * NOTE, does not relate to the unconscious trait either. Only the status effect.
+         */
+        type CanUnconscious = 4;
+        /** If set, this mob can be grabbed or pushed when bumped into */
+        type CanPush = 8;
+    }
+
+    type Status = Bitflag<
+        [Bitflags.Status.CanStun, Bitflags.Status.CanKnockdown, Bitflags.Status.CanUnconscious, Bitflags.Status.CanPush]
+    >;
+
     namespace Mobility {
         type Move = 1;
         type Stand = 2;
@@ -2384,6 +2614,32 @@ declare namespace Bitflags {
             Bitflags.Mobility.Pull,
             Bitflags.Mobility.Rest,
             Bitflags.Mobility.LieDown,
+        ]
+    >;
+
+    namespace Bodypart {
+        /** Bodypart cannot be dismembered or amputated */
+        type Unremovable = 1;
+        /** Bodypart is a pseudopart (like a chainsaw arm) */
+        type Pseudopart = 2;
+        /** Bodypart did not match the owner's default bodypart limb_id when surgically implanted */
+        type Implanted = 4;
+        /** Bodypart never displays as a husk */
+        type Unhuskable = 8;
+        /** Bodypart has never been added to a mob */
+        type Virgin = 16;
+        /** Not a full bodypart, but in fact is part of a missing limb */
+        type Stump = 32;
+    }
+
+    type Bodypart = Bitflag<
+        [
+            Bitflags.Bodypart.Unremovable,
+            Bitflags.Bodypart.Pseudopart,
+            Bitflags.Bodypart.Implanted,
+            Bitflags.Bodypart.Unhuskable,
+            Bitflags.Bodypart.Virgin,
+            Bitflags.Bodypart.Stump,
         ]
     >;
 

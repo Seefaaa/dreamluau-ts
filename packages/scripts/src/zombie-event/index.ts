@@ -1,5 +1,3 @@
-/** @noSelfInFile */
-
 import * as SS13 from "SS13";
 import { checkTick, makeClock } from "../common/tick";
 import { getZombieMutation } from "./globals";
@@ -7,7 +5,7 @@ import { setupZombieMutation } from "./mutation";
 
 // #region Initial settings
 
-admin = "sefaaa";
+runner = SS13.get_runner_ckey();
 isLocal = true;
 localClass = "Zombie";
 
@@ -35,12 +33,11 @@ if (!isLocal) {
 
 // #region Entry point
 
-const client = assert(dm.global_vars.GLOB.directory.get(admin));
-const user = assert(client.mob);
+const admin = SS13.get_runner_client();
 
 if (isLocal) {
-    const human = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
-    human.ckey = client.ckey;
+    const human = SS13.new("/mob/living/carbon/human", SS13.get_turf(admin.mob));
+    human.ckey = admin.ckey;
 
     setupZombieMutation(human);
 } else {
