@@ -1,6 +1,7 @@
 /** @noSelfInFile */
 
 import * as SS13 from "SS13";
+import * as HandlerGroup from "handler_group";
 import { isSpecies, ref } from "../common/globals";
 
 export function getPlane(newPlane: number, zReference: Byond.Atom): number {
@@ -39,3 +40,38 @@ export const createHref = (target: Byond.Atom, params: string, content: string):
 
 export const isZombieSpecies = (mob: Byond.Mob.Living.Carbon.Human) =>
     isSpecies(mob, "/datum/species/zombie/infectious");
+
+export function makeHearersVulnerable(position: Byond.Atom) {
+    const hearers = dm.global_procs.get_hearers_in_range(6, position);
+    if (!hearers) return;
+
+    const group = HandlerGroup.new();
+
+    for (const [, hearer] of list.filter(hearers, "/mob/living/carbon/human")) {
+        group.register_signal(hearer, "atom_expose_reagents", (_source, reagents) => {
+            for (const [reagent] of reagents) {
+                if (SS13.istype(reagent, "/datum/reagent/blob/networked_fibers")) {
+                    infectTarget(hearer);
+                    break;
+                }
+            }
+            return 0;
+        });
+    }
+
+    SS13.set_timeout(5, () => group.clear());
+}
+
+/**
+ * Inserts a zombie infection organ into the specified human mob if they do not already have one.
+ *
+ * @param human The human mob to infect with a zombie infection organ.
+ */
+export function infectTarget(human: Byond.Mob.Living.Carbon.Human) {
+    if (SS13.is_valid(human.get_organ_slot("zombie_infection"))) {
+        return;
+    }
+
+    const infection = SS13.new("/obj/item/organ/zombie_infection");
+    infection.Insert(human);
+}

@@ -74,7 +74,7 @@ export function controllerSay(controller: Byond.Mob, message: string, big?: bool
 export function makeZombieController(
     location: Byond.Turf,
     // lua cant resolve circular imports as good as ts can, so we have to pass this in as a parameter instead of importing it
-    setClass: typeof import("./mutation").ZombieClass.setClass
+    setClass: typeof import("./classes").ZombieClass.setClass
 ): Byond.Mob.Eye {
     // #region Controller Creation
 

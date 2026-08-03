@@ -12,7 +12,7 @@ declare namespace Byond {
 
 declare var runner: string;
 declare var isLocal: boolean;
-declare var localClass: import("./mutation").ZombieClassName;
+declare var localClass: keyof typeof import("./classes").zombieClasses;
 
 declare var isSpawning: boolean;
 declare var allowTankSpawn: boolean;
