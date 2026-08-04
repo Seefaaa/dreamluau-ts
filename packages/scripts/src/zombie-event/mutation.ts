@@ -137,26 +137,28 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
 
     SS13.register_signal(human, "species_gain", (_source, species) => {
         if (SS13.istype(species, "/datum/species/zombie/infectious") && mutation.class === "Non-Zombie") {
-            if (!allowZombieControllable) {
-                ZombieClass.setClass(mutation, "Zombie (AI)");
-                return;
-            }
-
-            ZombieClass.setClass(mutation, "Zombie");
-
-            SS13.set_timeout(0.5, () => {
-                const [input] = SS13.await(
-                    SS13.global_proc,
-                    "tgui_alert",
-                    mutation.mob,
-                    "You're a zombie now! Do you want to let the computer take control? You'll be allowed to re-enter your body once you are cured.",
-                    "Zombie Control",
-                    ["No", "Yes"]
-                );
-
-                if (input === "Yes") {
+            invokeAsync(() => {
+                if (!allowZombieControllable) {
                     ZombieClass.setClass(mutation, "Zombie (AI)");
+                    return;
                 }
+
+                ZombieClass.setClass(mutation, "Zombie");
+
+                SS13.set_timeout(0.5, () => {
+                    const [input] = SS13.await(
+                        SS13.global_proc,
+                        "tgui_alert",
+                        mutation.mob,
+                        "You're a zombie now! Do you want to let the computer take control? You'll be allowed to re-enter your body once you are cured.",
+                        "Zombie Control",
+                        ["No", "Yes"]
+                    );
+
+                    if (input === "Yes") {
+                        ZombieClass.setClass(mutation, "Zombie (AI)");
+                    }
+                });
             });
         }
     });
@@ -164,15 +166,17 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
     // setClass without set_timeout 0 might cause problems if setClass is sleeping
     SS13.register_signal(human, "species_loss", (_source, species) => {
         if (SS13.istype(species, "/datum/species/zombie/infectious")) {
-            ZombieClass.setClass(mutation, "Non-Zombie");
+            invokeAsync(() => ZombieClass.setClass(mutation, "Non-Zombie"));
         }
     });
 
     // this is problematic
     SS13.register_signal(human, "parent_preqdeleted", () => {
-        ZombieClass.setClass(mutation, undefined);
-        // @ts-expect-error assiging undefined deletes in lua
-        allMutations[humanRef] = undefined;
+        invokeAsync(() => {
+            ZombieClass.setClass(mutation, undefined);
+            // @ts-expect-error assiging undefined deletes in lua
+            allMutations[humanRef] = undefined;
+        });
     });
 
     SS13.register_signal(human, "handle_topic", (_source, user, hrefList) => {

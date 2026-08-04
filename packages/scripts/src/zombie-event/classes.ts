@@ -652,7 +652,7 @@ export const zombieClasses = {
 export const zombieAbilities = {
     bomber_explode: {
         name: "Detonate yourself",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_slime.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_slime.dmi"),
         icon_state: "gel_cocoon",
         abilityType: "normal",
         cooldown: 10,
@@ -665,9 +665,12 @@ export const zombieAbilities = {
     },
     boomer_spew: {
         name: "Spew bile",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_slime.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_slime.dmi"),
         icon_state: "consume",
         abilityType: "targeted",
+        pointerIcon: icon(
+            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
+        ),
         cooldown: 30,
         onActivate(context, _action, target) {
             if (!SS13.is_valid(context.mob) || has_trait(context.mob, "immobilized") || context.mob.body_position === 1)
@@ -757,9 +760,12 @@ export const zombieAbilities = {
 
     smoker_hook: {
         name: "Entangle",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_cult.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_cult.dmi"),
         icon_state: "carve",
         abilityType: "targeted",
+        pointerIcon: icon(
+            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
+        ),
         cooldown: 15,
         onActivate(context, _action, target) {
             if (!SS13.is_valid(context.mob) || has_trait(context.mob, "immobilized") || context.mob.body_position === 1)
@@ -799,7 +805,7 @@ export const zombieAbilities = {
 
     tank_roar: {
         name: "Roar",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_items.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_items.dmi"),
         icon_state: "berserk_mode",
         abilityType: "normal",
         cooldown: 15,
@@ -815,9 +821,12 @@ export const zombieAbilities = {
 
     jockey_leap: {
         name: "Leap",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_items.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_items.dmi"),
         icon_state: "jetboot",
         abilityType: "targeted",
+        pointerIcon: icon(
+            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
+        ),
         cooldown: 15,
         onActivate(context, _action, target) {
             if ("riding" in context && context.riding && SS13.is_valid(context.riding)) return 1;
@@ -826,6 +835,10 @@ export const zombieAbilities = {
                 if (!SS13.is_valid(context.mob)) return 1;
 
                 playsound(context.mob, "sound/weapons/fwoosh.ogg", 100, true);
+
+                const actionIcon = icon(
+                    "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_minor_antag.dmi"
+                );
 
                 HandlerGroup.register_once(context.mob, "movable_pre_impact", (zombie, victim) => {
                     if (
@@ -853,7 +866,7 @@ export const zombieAbilities = {
                     const timer = SS13.start_loop(5, -1, () => victim.emote("scream"));
                     const action = grantAbility(zombie, undefined, {
                         name: "Dismount",
-                        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_minor_antag.dmi",
+                        icon: actionIcon,
                         icon_state: "infect",
                         abilityType: "normal",
                         cooldown: 0,
@@ -863,21 +876,25 @@ export const zombieAbilities = {
                     });
 
                     cancel = () => {
-                        zombie.remote_control = undefined;
-                        zombie.pixel_z = 0;
-                        zombie.layer = 4;
+                        if (SS13.is_valid(zombie)) {
+                            zombie.remote_control = undefined;
+                            zombie.pixel_z = 0;
+                            zombie.layer = 4;
+                        }
 
-                        victim.remove_traits(
-                            ["block_transformations", "zs_being_ridden", "sleep_immunity"],
-                            "zombie_riding"
-                        );
-                        victim.mobility_flags = _G.bit32.bor(victim.mobility_flags, 384); // rest (128) | liedown (256)
+                        if (SS13.is_valid(victim)) {
+                            victim.remove_traits(
+                                ["block_transformations", "zs_being_ridden", "sleep_immunity"],
+                                "zombie_riding"
+                            );
+                            victim.mobility_flags = _G.bit32.bor(victim.mobility_flags, 384); // rest (128) | liedown (256)
+                        }
 
                         context.riding = undefined;
 
                         group.clear();
                         SS13.end_loop(timer);
-                        SS13.qdel(action);
+                        if (SS13.is_valid(action)) SS13.qdel(action);
                     };
 
                     // on deleted

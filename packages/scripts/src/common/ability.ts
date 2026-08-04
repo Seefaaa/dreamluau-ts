@@ -1,5 +1,4 @@
 import * as SS13 from "SS13";
-import { icon } from "./web-loader";
 
 /**
  * A builder for creating abilities that can be granted to mobs.
@@ -14,7 +13,7 @@ export type AbilityBuilder<Context = undefined> = {
     /**
      * The icon to display on the ability button. This should be a URL to an image file.
      */
-    icon: string;
+    icon: Byond.Icon;
     /**
      * The icon state to use for the ability button. This should be a string that corresponds to an icon state in the icon file.
      */
@@ -45,7 +44,18 @@ export type AbilityBuilder<Context = undefined> = {
         action: Byond.Datum.Action.Cooldown,
         target: Byond.Atom
     ) => OneBitOf<[COMPONENT_BLOCK_ABILITY_START]> | undefined;
-};
+} & (
+    | {
+          abilityType: "normal";
+      }
+    | {
+          abilityType: "targeted";
+          /**
+           * The mouse icon to display when the player activates the ability and is prompted to select a target.
+           */
+          pointerIcon: Byond.Icon;
+      }
+);
 
 /**
  * Creates and grants an ability to a mob. The ability is defined by the provided AbilityBuilder, and the context object is passed to the onActivate callback when the ability is activated.
@@ -64,9 +74,7 @@ export function grantAbility<Context>(
     if (ability.abilityType === "targeted") {
         action.click_to_activate = 1;
         action.unset_after_click = 1;
-        action.ranged_mousepointer = icon(
-            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
-        );
+        action.ranged_mousepointer = ability.pointerIcon;
     }
 
     action.name = ability.name;
@@ -75,7 +83,7 @@ export function grantAbility<Context>(
         action.desc = ability.desc;
     }
 
-    action.button_icon = icon(ability.icon);
+    action.button_icon = ability.icon;
     action.button_icon_state = ability.icon_state;
     action.background_icon_state = "bg_heretic";
     action.overlay_icon_state = "bg_hereic_border";

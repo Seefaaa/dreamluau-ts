@@ -234,7 +234,7 @@ export function makeZombieController(
      */
     grantAbility(controller, undefined, {
         name: "Send Message To Other Controllers",
-        icon: "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_xeno.dmi",
+        icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_xeno.dmi"),
         icon_state: "alien_whisper",
         abilityType: "normal",
         cooldown: 0,
@@ -278,9 +278,14 @@ export function makeZombieController(
     grantAbility(controller, undefined, {
         name: "Promote Tank",
         desc: "Promote someone to a tank for 60 seconds, giving them time to breach into the defenses of a department. Has a 15 minute cooldown.",
-        icon: "https://raw.githubusercontent.com/tgstation/auxlua-cookbook/master/waltermeldron/assets/zombie/zombie.dmi",
+        icon: icon(
+            "https://raw.githubusercontent.com/tgstation/auxlua-cookbook/master/waltermeldron/assets/zombie/zombie.dmi"
+        ),
         icon_state: "tank",
         abilityType: "targeted",
+        pointerIcon: icon(
+            "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
+        ),
         cooldown: cooldown,
         onActivate: (_context, action, target) => {
             if (!allowTankSpawn) {
