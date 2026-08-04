@@ -47,6 +47,9 @@ declare module "SS13_base" {
 
     export function is_valid(datum: Byond.Datum | undefined): datum is Byond.Datum;
 
+    /**
+     * @blocking
+     */
     export function check_tick(high_priority?: Byond.Bool): void;
 
     /**
@@ -57,12 +60,18 @@ declare module "SS13_base" {
         proc_to_call: F,
         ...args: A
     ): LuaMultiReturn<[ReturnsWhen<GlobalProcs[F], A>, string]>;
+    /**
+     * @blocking
+     */
     export function await<T extends Byond.Datum, F extends MethodsOf<T>>(
         thing_to_call: T,
         proc_to_call: F,
         ...args: T[F] extends (...args: infer U) => any ? U : never
     ): LuaMultiReturn<[T[F] extends (...args: any[]) => infer R ? R : never, string]>;
 
+    /**
+     * @shouldnotsleep
+     */
     export function register_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
         datum: D,
         signal: S,

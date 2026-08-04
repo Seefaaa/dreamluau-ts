@@ -59,6 +59,7 @@ export abstract class ZombieClass {
     /**
      * Registers a signal that only lives as long as this class does — `setClass` unregisters it on the way out.
      * Use this instead of `SS13.register_signal` from `onGain`, otherwise the handler outlives the class.
+     * @shouldnotsleep
      */
     protected registerSignal<T extends Byond.Datum, S extends keyof SignalRegistry<T>>(
         mutation: MutationData,

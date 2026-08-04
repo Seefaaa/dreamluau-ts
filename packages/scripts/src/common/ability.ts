@@ -37,6 +37,7 @@ export type AbilityBuilder<Context = undefined> = {
      * @param action The action object that represents the ability. This can be used to access the ability's properties and methods.
      * @param target The target object for the ability.
      * @returns A bitflag indicating the result of the ability activation.
+     * @shouldnotsleep This is called from the `mob_ability_base_started` signal handler in `grantAbility`.
      */
     onActivate: (
         this: void,

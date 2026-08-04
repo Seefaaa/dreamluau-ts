@@ -4,6 +4,8 @@
  * Yields the active thread, without worrying about passing data into or out of the state.
  *
  * Threads yielded this way are placed at the end of a queue. Call the awaken hook function from DM to execute the thread at the front of the queue.
+ *
+ * @blocking
  */
 declare function sleep(): void;
 
@@ -382,11 +384,6 @@ declare namespace Byond {
          * If a movable atom uses the bound vars to change its physical size, or step_x or step_y to change its position, it may cover more than one turf. In that case, those turfs’ contents won’t just contain anything directly in them, but also any atoms overhanging them. I.e., if a turf is in a mob’s locs list, then the mob is in that turf’s contents list. (See locs for more information.)
          */
         contents: Byond.List<number, Byond.Atom.Movable>;
-
-        /**
-         * Where atoms should drop if taken from this atom
-         */
-        drop_location(this: Byond.Atom): Byond.Atom | undefined;
     }
 
     namespace Atom {

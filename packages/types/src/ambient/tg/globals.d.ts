@@ -147,6 +147,8 @@ declare interface GlobalProcs {
      * * multiline -  Bool that determines if the input box is much larger. Good for large messages, laws, etc.
      * * encode - Toggling this determines if input is filtered via html_encode. Setting this to FALSE gives raw input.
      * * timeout - The timeout of the textbox, after which the modal will close and qdel itself. Set to zero for no timeout.
+     *
+     * @blocking
      */
     tgui_input_text(
         user: Byond.Mob | Byond.Client,
@@ -171,6 +173,8 @@ declare interface GlobalProcs {
      * * default - The default (or current) value, pre-selected in the list.
      * * timeout - The timeout of the list, after which the modal will close and qdel itself. Set to zero for no timeout.
      * * ui_state - The UI state for access checking.
+     *
+     * @blocking
      */
     tgui_input_list<T extends string>(
         user: Byond.Mob | Byond.Client,
@@ -193,6 +197,8 @@ declare interface GlobalProcs {
      * * buttons - The options that can be chosen by the user, each string is assigned a button on the UI.
      * * timeout - The timeout of the alert, after which the modal will close and qdel itself. Set to zero for no timeout.
      * * autofocus - The bool that controls if this alert should grab window focus.
+     *
+     * @blocking
      */
     tgui_alert<T extends string>(
         user: Byond.Mob | Byond.Client,

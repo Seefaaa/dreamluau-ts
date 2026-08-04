@@ -1,0 +1,26 @@
+{
+  "name": "blocking-lint",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
+    "postinstall": "tsc"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "index.ts",
+    "tsconfig.json"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "typescript-to-lua": "^1.37.1",
+    "typescript": "^6"
+  }
+}

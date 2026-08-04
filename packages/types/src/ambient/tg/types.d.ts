@@ -27,6 +27,9 @@ declare namespace SS13 {
     class SSspatial_grid extends Subsystem {}
 
     class SSpolling extends Subsystem {
+        /**
+         * @blocking
+         */
         poll_ghost_candidates(
             question?: string,
             role?: string,
@@ -1355,6 +1358,11 @@ declare namespace Byond {
         base_icon_state: string | undefined;
 
         resistance_flags: Bitflags.Resistance;
+
+        /**
+         * Where atoms should drop if taken from this atom
+         */
+        drop_location(this: Byond.Atom): Byond.Atom | undefined;
 
         add_overlay(
             this: Byond.Atom,

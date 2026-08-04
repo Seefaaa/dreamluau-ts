@@ -28,6 +28,7 @@ interface HandlerGroup {
      * @param datum The datum to register the signal on.
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted.
+     * @shouldnotsleep
      */
     register_signal<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
         this: HandlerGroup,
@@ -46,6 +47,7 @@ interface HandlerGroup {
      * @param datum The datum to clear the signal on.
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted.
+     * @shouldnotsleep
      */
     clear_on<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
         this: HandlerGroup,
@@ -67,6 +69,7 @@ interface HandlerGroupConstructor {
      * @param datum The datum to register the signal on.
      * @param signal The signal to register on the datum.
      * @param func The function to call when the signal is emitted. It will be cleared after it is called once.
+     * @shouldnotsleep
      */
     register_once<D extends Byond.Datum, S extends keyof SignalRegistry<D>>(
         this: void,
