@@ -328,12 +328,15 @@ class Analyzer {
     // #endregion
 }
 
+/** Runs the whole analysis over a program. Exported for the tests; the plugin hook is the only other caller. */
+export function analyze(program: ts.Program): ts.Diagnostic[] {
+    const analyzer = new Analyzer(program);
+    analyzer.check();
+    return analyzer.diagnostics;
+}
+
 const plugin: tstl.Plugin = {
-    beforeTransform(program: ts.Program) {
-        const analyzer = new Analyzer(program);
-        analyzer.check();
-        return analyzer.diagnostics;
-    },
+    beforeTransform: (program) => analyze(program),
 };
 
 export default plugin;
