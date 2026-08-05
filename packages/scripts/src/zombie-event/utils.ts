@@ -47,14 +47,21 @@ export function makeHearersVulnerable(position: Byond.Atom) {
 
     const group = HandlerGroup.new();
 
+    // atom_expose_reagents signal runs many times, so better cache to avoid overhead
+    const infected: Record<string, true> = {};
+
     for (const [, hearer] of list.filter(hearers, "/mob/living/carbon/human")) {
         group.register_signal(hearer, "atom_expose_reagents", (_source, reagents) => {
-            for (const [reagent] of reagents) {
+            if (infected[ref(hearer)]) return 0;
+
+            for (const [, reagent] of reagents) {
                 if (SS13.istype(reagent, "/datum/reagent/blob/networked_fibers")) {
+                    infected[ref(hearer)] = true;
                     infectTarget(hearer);
                     break;
                 }
             }
+
             return 0;
         });
     }

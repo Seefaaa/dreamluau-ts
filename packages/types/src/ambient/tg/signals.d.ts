@@ -27,7 +27,7 @@ declare interface Signals<S extends Byond.Datum> {
     atom_examine: (source: S, user: Byond.Mob, examine_list: Byond.List<number, string>) => Signal;
     atom_expose_reagents: (
         source: S,
-        reagents: Byond.List<Byond.Datum.Reagent, number>,
+        reagents: Byond.List<number, Byond.Datum.Reagent>,
         source_reagents: Byond.Datum.Reagents,
         methods: number,
         show_message: Byond.Bool

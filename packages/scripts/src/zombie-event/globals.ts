@@ -2,8 +2,8 @@
 
 import { ref } from "../common/globals";
 
-allMutations = allMutations ?? {};
+allZombies = allZombies ?? {};
 
-export function getMutation(human: Byond.Mob) {
-    return allMutations[ref(human)];
+export function getZombie(human: Byond.Mob) {
+    return allZombies[ref(human)];
 }

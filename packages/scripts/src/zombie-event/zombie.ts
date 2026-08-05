@@ -15,37 +15,146 @@ import {
 } from "../common/globals";
 import { getReadablePerfStat, sleepingAt, timeAvg, totalCallCount, totalTimeTaken } from "../common/perf";
 import { isAdmin } from "../common/utils";
-import { ZombieClass, zombieClasses } from "./classes";
+import { BasicZombie, NonZombie, type ZombieClass, zombieClasses } from "./classes";
 import { controllerSay } from "./controller";
 import { createHref, isZombieSpecies } from "./utils";
 
-export type MutationData = {
-    mob: Byond.Mob.Living.Carbon.Human;
-    class?: keyof typeof zombieClasses;
+// #region Zombie
 
-    zombieAi?: {
-        nextTargetSearch: number;
-        lastTarget: number;
-        makeActive: (this: NonNullable<MutationData["zombieAi"]>) => void;
-    };
+/**
+ * Everything about a mutated mob that outlives a class change. Anything scoped to a single class lives on the
+ * `ZombieClass` instance in `state` instead, and dies with it.
+ *
+ * One per mob, kept in `allZombies` under the mob's ref.
+ */
+export class Zombie {
+    /** The class currently applied, if any. */
+    state?: ZombieClass;
 
-    // spawned by a geyser or an admin
-    spawned?: boolean;
+    /**
+     * The applied class's name. Kept alongside `state` because the admin panel, the examine text and the antag
+     * datum all want the name, and a string still compares correctly across a script reload.
+     */
+    className?: keyof typeof zombieClasses;
 
-    // ability data
-    meathook?: Byond.Obj.Item.AmmoCasing.Magic.Hook;
-    riding?: Byond.Atom.Movable;
-
-    // transformation data
-    cleanup: (
-        | { target: Byond.Datum; signal: keyof SignalRegistry; callback: (...args: any[]) => any }
-        | ((...args: any[]) => void)
-    )[];
+    /** The species the mob had before it was zombified, restored on the way back to `Non-Zombie`. */
     oldSpecies?: Byond.Type<Byond.Datum.Species>;
+
+    /** The voice the mob had before it was zombified. */
     oldVoice?: string;
+
     antagDatum?: Byond.Datum.Antagonist;
-    overlay?: Byond.MutableAppearance; // overlay for the zombie class (tank), if any
-};
+
+    constructor(readonly mob: Byond.Mob.Living.Carbon.Human) {}
+
+    /**
+     * Applies `newClass` to this mob, tearing down whatever class it had before.
+     *
+     * Everything driven by the class's own data lives on `ZombieClass.apply` / `ZombieClass.teardown`; what is
+     * left here is the state that outlives a class change.
+     */
+    setClass(newClass: keyof typeof zombieClasses) {
+        if (this.className === newClass) return;
+
+        this.state?.teardown();
+
+        this.state = undefined;
+        this.className = undefined;
+
+        // widened to a single signature: `new` on a union of constructors does not type-check, and every class
+        // takes the same argument anyway
+        const ZombieClassConstructor: new (zombie: Zombie) => ZombieClass = zombieClasses[newClass];
+        const nextClass = new ZombieClassConstructor(this);
+
+        // set before anything can run, so `isActive` is already true inside `onGain`
+        this.state = nextClass;
+        this.className = newClass;
+
+        // #region Species
+
+        if (isZombieSpecies(this.mob)) {
+            if (nextClass instanceof NonZombie) {
+                if (this.oldSpecies) {
+                    this.mob.set_species(this.oldSpecies);
+                } else {
+                    this.mob.set_species(SS13.type("/datum/species/human"));
+                }
+
+                this.mob.voice = this.oldVoice;
+
+                if (this.antagDatum) {
+                    this.antagDatum.on_removal();
+                    SS13.qdel(this.antagDatum);
+                    this.antagDatum = undefined;
+                }
+            }
+        } else {
+            if (!(nextClass instanceof NonZombie)) {
+                this.mob.set_species(SS13.type("/datum/species/zombie/infectious"));
+                this.oldVoice = this.mob.voice;
+                this.mob.voice = "Man (Big)";
+            }
+        }
+
+        // #endregion
+
+        // #region Antag datum
+
+        if (!this.antagDatum && !(nextClass instanceof NonZombie)) {
+            this.mob.mind_initialize();
+
+            const antag = SS13.new("/datum/antagonist/custom");
+            antag.show_in_roundend = false;
+            antag.show_to_ghosts = true;
+            antag.ui_name = undefined;
+
+            const mind = assert(this.mob.mind);
+
+            const objective = SS13.new("/datum/objective");
+            objective.owner = mind;
+            objective.explanation_text = "Seek out the humans, kill the humans.";
+            objective.completed = true;
+
+            list.add(antag.objectives, objective);
+
+            mind.add_antag_datum(antag);
+
+            this.antagDatum = antag;
+        }
+
+        if (this.antagDatum) {
+            this.antagDatum.name = newClass;
+            this.antagDatum.antagpanel_category = nextClass instanceof BasicZombie ? "Infected" : "Special Infected";
+        }
+
+        // #endregion
+
+        // #region Infection organ
+
+        if (isZombieSpecies(this.mob)) {
+            const infection = this.mob.get_organ_slot("zombie_infection");
+
+            if (SS13.is_valid(infection)) {
+                if (nextClass.noRevive) {
+                    if (infection.old_species) {
+                        this.oldSpecies = infection.old_species;
+                    }
+                    infection.old_species = undefined;
+                } else {
+                    infection.UnregisterSignal(this.mob, "living_death");
+                }
+            }
+
+            this.mob.remove_traits(["nodeath"], "species");
+        }
+
+        // #endregion
+
+        nextClass.apply();
+    }
+}
+
+// #endregion
 
 // #region Cure Injector
 
@@ -64,6 +173,7 @@ export function createCureInjector(location: Byond.Atom) {
     const implant = SS13.new("/obj/item/implant", implanter);
     implant.name = "biocure";
     implant.allow_multiple = true;
+    implant.actions_types = undefined;
     implant.add_traits(["zs_zombie_cure"], "innate");
 
     implanter.imp = implant;
@@ -74,40 +184,36 @@ export function createCureInjector(location: Byond.Atom) {
 
 // #endregion
 
-// #region Zombie Mutation Setup
+// #region Zombie Setup
 
 /**
- * Sets up the zombie mutation for a given human mob. It initializes the mutation data, registers
- * necessary signals,and sets the initial class based on the human's species.
+ * Sets up the zombie record for a given human mob. It creates the record, registers necessary signals,
+ * and sets the initial class based on the human's species.
  *
- * @param human The human mob for which the zombie mutation is being set up.
- * @returns The initialized mutation data for the human mob.
+ * @param human The human mob for which the record is being set up.
+ * @returns The initialized record for the human mob.
  */
-export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): MutationData {
+export function setupZombie(human: Byond.Mob.Living.Carbon.Human): Zombie {
     const humanRef = ref(human);
 
-    const existingMutation = allMutations[humanRef];
-    if (existingMutation) ZombieClass.setClass(existingMutation, undefined);
+    const existing = allZombies[humanRef];
+    if (existing) return existing;
 
-    const mutation: MutationData = {
-        mob: human,
-        class: "Non-Zombie",
-        cleanup: [],
-    };
+    const zombie = new Zombie(human);
 
     if (isLocal && human.ckey === runner) {
-        ZombieClass.setClass(mutation, localClass);
+        zombie.setClass(localClass);
     } else {
-        if (isZombieSpecies(human)) ZombieClass.setClass(mutation, "Zombie");
-        else ZombieClass.setClass(mutation, "Non-Zombie");
+        if (isZombieSpecies(human)) zombie.setClass("Zombie");
+        else zombie.setClass("Non-Zombie");
     }
 
-    allMutations[humanRef] = mutation;
+    allZombies[humanRef] = zombie;
 
     SS13.unregister_signal(human, "atom_examine");
     SS13.unregister_signal(human, "species_gain");
     SS13.unregister_signal(human, "species_loss");
-    SS13.unregister_signal(human, "parent_preqdeleted");
+    SS13.unregister_signal(human, "parent_qdeleting");
     SS13.unregister_signal(human, "handle_topic");
 
     SS13.register_signal(human, "atom_examine", (_source, examiner, examination) => {
@@ -116,7 +222,7 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
         if (admin || SS13.istype(examiner, "/mob/dead")) {
             list.add(
                 examination,
-                `<hr/><span class='notice'>Zombie Class: ${admin ? createHref(human, "set_class=1", mutation.class ?? "Unassigned") : mutation.class}</span>`
+                `<hr/><span class='notice'>Zombie Class: ${admin ? createHref(human, "set_class=1", zombie.className ?? "Unassigned") : zombie.className}</span>`
             );
 
             const infection = human.get_organ_slot("zombie_infection");
@@ -136,47 +242,45 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
     });
 
     SS13.register_signal(human, "species_gain", (_source, species) => {
-        if (SS13.istype(species, "/datum/species/zombie/infectious") && mutation.class === "Non-Zombie") {
+        if (SS13.istype(species, "/datum/species/zombie/infectious") && zombie.className === "Non-Zombie") {
             invokeAsync(() => {
                 if (!allowZombieControllable) {
-                    ZombieClass.setClass(mutation, "Zombie (AI)");
+                    zombie.setClass("Zombie (AI)");
                     return;
                 }
 
-                ZombieClass.setClass(mutation, "Zombie");
+                zombie.setClass("Zombie");
 
                 SS13.set_timeout(0.5, () => {
                     const [input] = SS13.await(
                         SS13.global_proc,
                         "tgui_alert",
-                        mutation.mob,
+                        zombie.mob,
                         "You're a zombie now! Do you want to let the computer take control? You'll be allowed to re-enter your body once you are cured.",
                         "Zombie Control",
                         ["No", "Yes"]
                     );
 
                     if (input === "Yes") {
-                        ZombieClass.setClass(mutation, "Zombie (AI)");
+                        zombie.setClass("Zombie (AI)");
                     }
                 });
             });
         }
     });
 
-    // setClass without set_timeout 0 might cause problems if setClass is sleeping
     SS13.register_signal(human, "species_loss", (_source, species) => {
         if (SS13.istype(species, "/datum/species/zombie/infectious")) {
-            invokeAsync(() => ZombieClass.setClass(mutation, "Non-Zombie"));
+            invokeAsync(() => zombie.setClass("Non-Zombie"));
         }
     });
 
-    // this is problematic
-    SS13.register_signal(human, "parent_preqdeleted", () => {
-        invokeAsync(() => {
-            ZombieClass.setClass(mutation, undefined);
-            // @ts-expect-error assiging undefined deletes in lua
-            allMutations[humanRef] = undefined;
-        });
+    SS13.register_signal(human, "parent_qdeleting", () => {
+        zombie.state?.teardown();
+        zombie.state = undefined;
+        zombie.className = undefined;
+        // @ts-expect-error assiging undefined deletes in lua
+        allZombies[humanRef] = undefined;
     });
 
     SS13.register_signal(human, "handle_topic", (_source, user, hrefList) => {
@@ -194,6 +298,8 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
 
                 if (classList.length === 0) return;
 
+                table.sort(classList);
+
                 const [choice] = SS13.await(
                     SS13.global_proc,
                     "tgui_input_list",
@@ -206,16 +312,16 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
                 if (!choice || !(choice in zombieClasses)) return;
                 if (!SS13.is_valid(user) || !SS13.is_valid(human)) return;
 
-                ZombieClass.setClass(mutation, choice as keyof typeof zombieClasses);
+                zombie.setClass(choice as keyof typeof zombieClasses);
             } else refresh = handleSettingsTopic(user, hrefList) ?? refresh;
 
             if (refresh || "settings" in hrefList || "refresh" in hrefList) {
-                openZombieSettings(user, mutation);
+                openZombieSettings(user, zombie);
             }
         });
     });
 
-    return mutation;
+    return zombie;
 }
 
 // #endregion
@@ -227,44 +333,38 @@ export function setupZombieMutation(human: Byond.Mob.Living.Carbon.Human): Mutat
  * zombie-related settings, sending messages to controllers, spawning cure crates, and toggling zombie spawning settings.
  *
  * @param user The user who will see the zombie settings menu.
- * @param mutation Mutation data of any mob, only used to send hrefs, has nothing to do with the data itself.
+ * @param zombie The record of any mob, only used to send hrefs, has nothing to do with the record itself.
  */
-function openZombieSettings(user: Byond.Mob, mutation: MutationData) {
+function openZombieSettings(user: Byond.Mob, zombie: Zombie) {
     const browser = SS13.new("/datum/browser", user, "SettingsMenu", "Settings Menu", 300, 400);
 
     let content = `<h1>Settings Menu</h1></hr>`;
 
-    content += label("Refresh", createHref(mutation.mob, "refresh=1", "Refresh"));
-    content += label("Message", createHref(mutation.mob, "message_controllers=1", "Message all zombie controllers"));
-    content += label("Cure", createHref(mutation.mob, "spawn_cure=1", "Spawn cure crate"));
-    content += label("Cure Spawner", createHref(mutation.mob, "spawn_cure_spawner=1", "Spawn cure spawner"));
-    content += label("Zombie AI", createHref(mutation.mob, "spawn_zombie_ai=1", "Spawn zombie AI"));
-    content += label("Zombie Spawner", createHref(mutation.mob, "spawn_zombie_spawner=1", "Spawn zombie spawner"));
-    content += label("Supplies", createHref(mutation.mob, "spawn_supply_crate=1", "Spawn supply crate"));
-    content += label("Supplies", createHref(mutation.mob, "spawn_supply_crate=1&timed=1", "Spawn timed supply crate"));
+    content += label("Refresh", createHref(zombie.mob, "refresh=1", "Refresh"));
+    content += label("Message", createHref(zombie.mob, "message_controllers=1", "Message all zombie controllers"));
+    content += label("Cure", createHref(zombie.mob, "spawn_cure=1", "Spawn cure crate"));
+    content += label("Cure Spawner", createHref(zombie.mob, "spawn_cure_spawner=1", "Spawn cure spawner"));
+    content += label("Zombie AI", createHref(zombie.mob, "spawn_zombie_ai=1", "Spawn zombie AI"));
+    content += label("Zombie Spawner", createHref(zombie.mob, "spawn_zombie_spawner=1", "Spawn zombie spawner"));
+    content += label("Supplies", createHref(zombie.mob, "spawn_supply_crate=1", "Spawn supply crate"));
+    content += label("Supplies", createHref(zombie.mob, "spawn_supply_crate=1&timed=1", "Spawn timed supply crate"));
 
     content += label(
         "Zombies Spawning",
-        createHref(mutation.mob, `set_spawning=${isSpawning ? "0" : "1"}`, isSpawning ? "Enabled" : "Disabled")
+        createHref(zombie.mob, `set_spawning=${isSpawning ? "0" : "1"}`, isSpawning ? "Enabled" : "Disabled")
     );
     content += label(
         "Allow Tank Spawning",
-        createHref(
-            mutation.mob,
-            `set_tank_spawn=${allowTankSpawn ? "0" : "1"}`,
-            allowTankSpawn ? "Enabled" : "Disabled"
-        )
+        createHref(zombie.mob, `set_tank_spawn=${allowTankSpawn ? "0" : "1"}`, allowTankSpawn ? "Enabled" : "Disabled")
     );
     content += label(
         "Allow Zombie Control",
         createHref(
-            mutation.mob,
+            zombie.mob,
             `set_zombie_control=${allowZombieControllable ? "0" : "1"}`,
             allowZombieControllable ? "Enabled" : "Disabled"
         )
     );
-
-    content += `<hr/><b>TOTAL ZOMBIE AI: ${totalZombieAi}</b><br>`;
 
     const timeAvgKeys: number[] = [];
     let prevLine: number | undefined;
@@ -359,9 +459,12 @@ function handleSettingsTopic(user: Byond.Mob, hrefList: Byond.List<string, strin
                 return;
             }
 
+            // `contents` is a special DM list rather than a real one, so walk it directly instead of
+            // going through `list.filter`, the original Luau script does the same for this reason.
             const hitLimit = (location: Byond.Atom) => {
                 let count = 0;
-                for (const [, obj] of list.filter(location.contents, "/obj/item/implanter")) {
+                for (const [, obj] of location.contents) {
+                    if (!SS13.istype(obj, "/obj/item/implanter")) continue;
                     if (SS13.is_valid(obj.imp) && has_trait(obj.imp, "zs_zombie_cure")) count += 1;
                 }
                 return count >= 5;
@@ -380,14 +483,11 @@ function handleSettingsTopic(user: Byond.Mob, hrefList: Byond.List<string, strin
             SS13.end_loop(loop);
         });
     } else if ("spawn_zombie_ai" in hrefList) {
-        const zombie = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
+        const mob = SS13.new("/mob/living/carbon/human", SS13.get_turf(user));
 
-        zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
+        mob.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
 
-        const mutation = setupZombieMutation(zombie);
-        mutation.spawned = true;
-
-        ZombieClass.setClass(mutation, "Zombie (AI)");
+        setupZombie(mob).setClass("Zombie (AI)");
     } else if ("spawn_zombie_spawner" in hrefList) {
         let zombies = 0;
 
@@ -449,37 +549,34 @@ function handleSettingsTopic(user: Byond.Mob, hrefList: Byond.List<string, strin
                 mind = SS13.new("/datum/mind", chosen.key);
             }
 
-            const zombie = SS13.new("/mob/living/carbon/human", location);
-            zombie.anchored = true;
+            const mob = SS13.new("/mob/living/carbon/human", location);
+            mob.anchored = true;
 
-            zombie.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
+            mob.equipOutfit(SS13.type("/datum/outfit/job/assistant"));
 
-            add_trait(zombie, "block_transformations", "zs_spawner");
+            add_trait(mob, "block_transformations", "zs_spawner");
 
-            const mutation = setupZombieMutation(zombie);
-            mutation.spawned = true;
-
-            ZombieClass.setClass(mutation, className);
+            setupZombie(mob).setClass(className);
 
             zombies += 1;
 
-            if (mind) mind.transfer_to(zombie, true);
+            if (mind) mind.transfer_to(mob, true);
 
             SS13.set_timeout(1, () => {
-                if (!SS13.is_valid(zombie)) return;
+                if (!SS13.is_valid(mob)) return;
 
-                zombie.anchored = false;
+                mob.anchored = false;
 
-                remove_trait(zombie, "block_transformations", "zs_spawner");
+                remove_trait(mob, "block_transformations", "zs_spawner");
 
                 const group = HandlerGroup.new();
 
-                group.register_signal(zombie, "living_death", () => {
+                group.register_signal(mob, "living_death", () => {
                     zombies -= 1;
                     group.clear();
                 });
 
-                group.register_signal(zombie, "parent_qdeleting", () => {
+                group.register_signal(mob, "parent_qdeleting", () => {
                     zombies -= 1;
                     group.clear();
                 });
@@ -528,7 +625,5 @@ function handleSettingsTopic(user: Byond.Mob, hrefList: Byond.List<string, strin
 
 const label = (label: string, content: string): string =>
     `<div style='display: flex; margin-top: 4px;'><div style='flex-grow: 1; color: #98B0C3;'>${label}:</div><div>${content}</div></div>`;
-
-const totalZombieAi = 0;
 
 // #endregion

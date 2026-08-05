@@ -1825,7 +1825,16 @@ declare namespace Byond {
     }
 
     namespace Obj {
-        class Item extends Byond.Obj {}
+        class Item extends Byond.Obj {
+            /**
+             * list of paths of action datums to give to the item on New().
+             */
+            get actions_types(): Byond.List<string, Byond.Type<Byond.Datum.Action>> | undefined;
+            set actions_types(value:
+                | Byond.List<string, Byond.Type<Byond.Datum.Action>>
+                | Byond.Type<Byond.Datum.Action>[]
+                | undefined);
+        }
 
         namespace Item {
             class Bodypart extends Byond.Obj.Item {

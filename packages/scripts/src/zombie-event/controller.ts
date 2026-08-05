@@ -15,8 +15,8 @@ import {
     trim,
 } from "../common/globals";
 import { icon } from "../common/web-loader";
-import { getMutation } from "./globals";
-import { getPlane, isZombieSpecies } from "./utils";
+import { getZombie } from "./globals";
+import { getPlane } from "./utils";
 
 // #region Zombie Controller
 
@@ -71,11 +71,7 @@ export function controllerSay(controller: Byond.Mob, message: string, big?: bool
  * @param location The turf location where the zombie controller will be spawned.
  * @returns The newly created zombie controller mob.
  */
-export function makeZombieController(
-    location: Byond.Turf,
-    // lua cant resolve circular imports as good as ts can, so we have to pass this in as a parameter instead of importing it
-    setClass: typeof import("./classes").ZombieClass.setClass
-): Byond.Mob.Eye {
+export function makeZombieController(location: Byond.Turf): Byond.Mob.Eye {
     // #region Controller Creation
 
     const controller = SS13.new("/mob/eye", location);
@@ -144,22 +140,8 @@ export function makeZombieController(
             });
         }
 
-        const potentialTargets = dm.global_procs.get_hearers_in_range(10, controller);
-        if (!potentialTargets) return 0;
-
-        for (const [, zombie] of list.filter(potentialTargets, "/mob/living/carbon/human")) {
-            if (!isZombieSpecies(zombie)) continue;
-
-            const mutation = getMutation(zombie);
-
-            if (!mutation || mutation.class !== "Zombie (AI)") continue;
-
-            if (mutation.zombieAi !== undefined) {
-                mutation.zombieAi.nextTargetSearch = 0;
-                mutation.zombieAi.lastTarget = dm.world.time;
-                mutation.zombieAi.makeActive();
-            }
-        }
+        // `zombieControllerTargets` above is what the zombie AI will read once it exists; there is nothing to
+        // notify yet, so the rally is currently only the bookkeeping and the chat message.
 
         nextRally = dm.world.time + 30;
 
@@ -232,13 +214,13 @@ export function makeZombieController(
      * Grants the "Send Message To Other Controllers" ability to the zombie controller.
      * This ability allows the controller to send a message to all other zombie controllers in the game.
      */
-    grantAbility(controller, undefined, {
+    grantAbility(controller, {
         name: "Send Message To Other Controllers",
         icon: icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/actions/actions_xeno.dmi"),
         icon_state: "alien_whisper",
         abilityType: "normal",
         cooldown: 0,
-        onActivate: (_context, _action, _target) => {
+        onActivate: (_action, _target) => {
             if (isUiOpen) return 1;
 
             invokeAsync(() => {
@@ -275,7 +257,7 @@ export function makeZombieController(
      * tank for 60 seconds, giving them time to breach into the defenses of a department. The ability has a cooldown of 15 minutes. When the time is up,
      * the promoted tank will revert back to a less powerful zombie class.
      */
-    grantAbility(controller, undefined, {
+    grantAbility(controller, {
         name: "Promote Tank",
         desc: "Promote someone to a tank for 60 seconds, giving them time to breach into the defenses of a department. Has a 15 minute cooldown.",
         icon: icon(
@@ -287,7 +269,7 @@ export function makeZombieController(
             "https://raw.githubusercontent.com/tgstation/tgstation/master/icons/effects/mouse_pointers/cult_target.dmi"
         ),
         cooldown: cooldown,
-        onActivate: (_context, action, target) => {
+        onActivate: (action, target) => {
             if (!allowTankSpawn) {
                 controller.balloon_alert(controller, "tank spawn disabled");
                 return 1;
@@ -303,9 +285,9 @@ export function makeZombieController(
                 return 1;
             }
 
-            const mutation = getMutation(target);
+            const zombie = getZombie(target);
 
-            if (!mutation || mutation.class !== "Zombie (AI)") {
+            if (!zombie || zombie.className !== "Zombie (AI)") {
                 controller.balloon_alert(controller, "invalid target");
                 return 1;
             }
@@ -323,7 +305,7 @@ export function makeZombieController(
 
                 const objective = dm.global_procs.sanitize(text);
 
-                setClass(mutation, "Tank");
+                zombie.setClass("Tank");
 
                 const [candidates] = SS13.await(
                     dm.global_vars.SSpolling,
@@ -356,7 +338,7 @@ export function makeZombieController(
                         controller,
                         "<span class='warning'>Not enough players volunteered for the Tank role.</span>"
                     );
-                    setClass(mutation, "Zombie (AI)");
+                    zombie.setClass("Zombie (AI)");
                     if (SS13.is_valid(action)) action.StartCooldownSelf(1);
                     return;
                 }
@@ -377,7 +359,7 @@ export function makeZombieController(
                 SS13.set_timeout(60, () => {
                     if (SS13.is_valid(promotedTank) && promotedTank.stat !== 4) {
                         to_chat(promotedTank, "<span class='userdanger'>Times up!</span>");
-                        setClass(mutation, pick_list(["Boomer", "Jockey", "Smoker"] as const));
+                        zombie.setClass(pick_list(["Boomer", "Jockey", "Smoker"] as const));
                     }
                 });
             });

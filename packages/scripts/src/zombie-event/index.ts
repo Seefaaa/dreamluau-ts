@@ -1,19 +1,20 @@
 import * as SS13 from "SS13";
 import { invokeAsync } from "../common/async";
 import { checkTick, makeClock } from "../common/tick";
-import { getMutation } from "./globals";
-import { setupZombieMutation } from "./mutation";
+import { getZombie } from "./globals";
+import { setupZombie } from "./zombie";
 
 // #region Initial settings
 
 runner = SS13.get_runner_ckey();
-isLocal = false;
-localClass = "Zombie";
 
-isSpawning = false;
-allowTankSpawn = true;
-allowZombieControllable = false;
-destructibleSpawners = false;
+isLocal ??= false;
+localClass ??= "Zombie";
+
+isSpawning ??= false;
+allowTankSpawn ??= true;
+allowZombieControllable ??= false;
+destructibleSpawners ??= false;
 
 SS13.state.supress_runtimes = false;
 
@@ -40,7 +41,7 @@ if (isLocal) {
     const human = SS13.new("/mob/living/carbon/human", SS13.get_turf(admin.mob));
     human.ckey = admin.ckey;
 
-    setupZombieMutation(human);
+    setupZombie(human);
 } else {
     const SSdcs = dm.global_vars.SSdcs;
 
@@ -49,8 +50,8 @@ if (isLocal) {
     SS13.register_signal(SSdcs, "!mob_created", (_source, mob) => {
         invokeAsync(() => {
             if (SS13.is_valid(mob) && SS13.istype(mob, "/mob/living/carbon/human")) {
-                if (!getMutation(mob)) {
-                    setupZombieMutation(mob);
+                if (!getZombie(mob)) {
+                    setupZombie(mob);
                 }
             }
         });
@@ -60,10 +61,7 @@ if (isLocal) {
 
     for (const [, human] of list.filter(dm.global_vars.GLOB.mob_living_list, "/mob/living/carbon/human")) {
         checkTick(clock);
-
-        invokeAsync(() => {
-            if (SS13.is_valid(human)) setupZombieMutation(human);
-        });
+        if (SS13.is_valid(human)) setupZombie(human);
     }
 }
 

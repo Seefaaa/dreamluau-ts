@@ -36,7 +36,7 @@ export function tickLag(worldTime: number): boolean {
  *
  * for (const [, human] of list.filter(dm.global_vars.GLOB.mob_living_list, "/mob/living/carbon/human")) {
  *     checkTick(clock);
- *     setupZombieMutation(human);
+ *     setupZombie(human);
  * }
  * ```
  *

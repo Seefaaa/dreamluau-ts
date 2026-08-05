@@ -2,9 +2,8 @@ import * as SS13 from "SS13";
 
 /**
  * A builder for creating abilities that can be granted to mobs.
- * @typeParam Context - The type of the context object that will be passed to the onActivate callback.
  */
-export type AbilityBuilder<Context = undefined> = {
+export type AbilityBuilder = {
     /**
      * The type of ability. "normal" abilities are activated by clicking on the ability button,
      * while "targeted" abilities require the player to click on a target after activating the ability.
@@ -32,7 +31,6 @@ export type AbilityBuilder<Context = undefined> = {
     cooldown?: number;
     /**
      * Callback function that is called when the ability is activated. This function should return a bitflag indicating what happened when the ability was activated.
-     * @param context The context object that was passed to the grantAbility function. This can be used to store any data that needs to be accessed when the ability is activated.
      * @param action The action object that represents the ability. This can be used to access the ability's properties and methods.
      * @param target The target object for the ability.
      * @returns A bitflag indicating the result of the ability activation.
@@ -40,7 +38,6 @@ export type AbilityBuilder<Context = undefined> = {
      */
     onActivate: (
         this: void,
-        context: Context,
         action: Byond.Datum.Action.Cooldown,
         target: Byond.Atom
     ) => OneBitOf<[COMPONENT_BLOCK_ABILITY_START]> | undefined;
@@ -58,17 +55,12 @@ export type AbilityBuilder<Context = undefined> = {
 );
 
 /**
- * Creates and grants an ability to a mob. The ability is defined by the provided AbilityBuilder, and the context object is passed to the onActivate callback when the ability is activated.
+ * Creates and grants an ability to a mob. The ability is defined by the provided AbilityBuilder.
  * @param mob The mob to which the ability will be granted.
- * @param context The context object that will be passed to the onActivate callback when the ability is activated. This can be used to store any data that needs to be accessed when the ability is activated.
  * @param ability The AbilityBuilder that defines the ability to be granted. This includes the ability's type, icon, name, description, cooldown time, and onActivate callback.
  * @returns The created `Byond.Datum.Action.Cooldown` object
  */
-export function grantAbility<Context>(
-    mob: Byond.Mob,
-    context: Context,
-    ability: AbilityBuilder<Context>
-): Byond.Datum.Action.Cooldown {
+export function grantAbility(mob: Byond.Mob, ability: AbilityBuilder): Byond.Datum.Action.Cooldown {
     const action = SS13.new("/datum/action/cooldown");
 
     if (ability.abilityType === "targeted") {
@@ -91,22 +83,37 @@ export function grantAbility<Context>(
 
     action.cooldown_time = (ability.cooldown ?? 0) * 10;
 
-    SS13.register_signal(mob, "mob_ability_base_started", (source, actionTarget, target) => {
-        if (dm.global_procs.REF(actionTarget) === dm.global_procs.REF(action)) {
-            const result = ability.onActivate(context, action, target);
+    const handler = (source: Byond.Mob, actionTarget: Byond.Datum.Action.Cooldown, target: Byond.Atom) => {
+        if (!SS13.is_valid(action) || !SS13.is_valid(actionTarget)) return 0;
 
-            if (action.unset_after_click === 1) {
+        if (dm.global_procs.REF(actionTarget) === dm.global_procs.REF(action)) {
+            const clickCooldown = action.click_cd_override;
+
+            const result = ability.onActivate(action, target);
+
+            // onActivate may delete the action
+            if (SS13.is_valid(action) && action.unset_after_click === 1) {
                 action.unset_click_ability(source, false);
             }
 
-            source.next_click = dm.world.time + action.click_cd_override;
+            source.next_click = dm.world.time + clickCooldown;
 
             return result ?? 0;
         }
+
         return 0;
+    };
+
+    SS13.register_signal(mob, "mob_ability_base_started", handler);
+
+    SS13.register_signal(action, "parent_qdeleting", () => {
+        SS13.unregister_signal(mob, "mob_ability_base_started", handler);
     });
 
     action.Grant(mob);
 
     return action;
 }
+
+declare var counter: number;
+counter ??= 0;

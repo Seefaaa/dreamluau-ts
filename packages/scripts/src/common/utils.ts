@@ -20,7 +20,7 @@ export function isAdmin(mob: Byond.Mob): boolean {
     return SS13.is_valid(client.holder);
 }
 
-export function pickRandom<T>(array: [T, T, ...T[]]): T {
+export function pick<T>(array: [T, T, ...T[]]): T {
     // biome-ignore lint/style/noNonNullAssertion: random index is guaranteed to be valid since the array has at least one element
     return array[math.random(0, array.length - 1)]!;
 }
