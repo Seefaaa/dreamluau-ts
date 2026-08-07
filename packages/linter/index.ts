@@ -2,7 +2,8 @@ import ts from "typescript";
 import type * as tstl from "typescript-to-lua";
 
 /**
- * A tstl plugin that reports blocking (sleeping) calls made from contexts that must not sleep.
+ * The project's tstl lint plugin. It currently carries one rule, `blocking`, which reports blocking (sleeping)
+ * calls made from contexts that must not sleep.
  *
  * BYOND procs are not all synchronous: a proc that calls `sleep()` does not block the engine, it yields
  * itself and is resumed later. Some contexts are resumed by nobody — a signal handler runs synchronously
@@ -29,8 +30,14 @@ const BLOCKING = "blocking";
 const SHOULD_NOT_SLEEP = "shouldnotsleep";
 const ASYNC = "async";
 
-/** Diagnostic code reported for every violation. Outside the ranges TypeScript and tstl use. */
-const DIAGNOSTIC_CODE = 90001;
+/**
+ * Identifies the rule on every diagnostic it reports. Slash-namespaced like Biome's rule names, so a second
+ * rule would be `linter/<its-name>`.
+ */
+const BLOCKING_SOURCE = "linter/blocking";
+
+/** Diagnostic code for the `blocking` rule. Outside the ranges TypeScript and tstl use; a second rule takes 90002. */
+const BLOCKING_CODE = 90001;
 
 type FunctionWithBody = ts.SignatureDeclaration & { body: ts.Node };
 
@@ -316,8 +323,8 @@ class Analyzer {
             start: at.getStart(),
             length: at.getWidth(),
             category: ts.DiagnosticCategory.Error,
-            code: DIAGNOSTIC_CODE,
-            source: "blocking-lint",
+            code: BLOCKING_CODE,
+            source: BLOCKING_SOURCE,
             messageText:
                 `\`${culprit.name}\` can sleep, but this runs where sleeping is not allowed (${context}).\n` +
                 trail +

@@ -14,7 +14,7 @@
     "luaBundle": "main.lua",
     "luaBundleEntry": "./src/index.ts",
     "luaLibImport": "require-minimal",
-    "luaPlugins": [{ "name": "formatter" }, { "name": "blocking-lint" }]
+    "luaPlugins": [{ "name": "formatter" }, { "name": "linter" }]
   },
   "include": ["src"]
 }

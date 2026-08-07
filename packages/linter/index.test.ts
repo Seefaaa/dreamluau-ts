@@ -71,7 +71,7 @@ function messagesOf(diagnostics: ts.Diagnostic[]): string[] {
     return diagnostics.map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
 }
 
-describe("blocking-lint", () => {
+describe("linter/blocking", () => {
     test("reports a blocking call made directly in a must-not-sleep callback", () => {
         const diagnostics = diagnose(`
             onSignal(() => {

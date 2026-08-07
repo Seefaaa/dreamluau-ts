@@ -13,13 +13,13 @@ bun run build       # tstl compile -> packages/scripts/dist/main.lua  (ALSO the 
 bun run dev         # tstl --watch
 bun run check       # biome format + lint check (what CI runs)
 bun run check:fix   # biome auto-fix
-bun run test        # bun test — only `packages/blocking-lint` has any
+bun run test        # bun test — only `packages/linter` has any
 ```
 
 There is no separate `tsc --noEmit` script. **`bun run build` is the type check**; `bun run check` is Biome and
 does not type check.
 
-`bun test` covers `packages/blocking-lint` only; the game scripts have no tests and are not meant to grow any
+`bun test` covers `packages/linter` only; the game scripts have no tests and are not meant to grow any
 (they can only be exercised in a running server). The lint plugin is the exception because it is ordinary
 compiler-API code whose failure mode is silent — a broken analysis stops reporting, and a clean build then looks
 identical to success.
@@ -39,10 +39,11 @@ Bun workspace monorepo with four packages:
   emitted Lua in `beforeEmit`. **It is loaded from its build output** (`main: "./dist/index.js"`), so editing
   `packages/formatter/index.ts` has no effect until you run `bun run --filter formatter build` — `bun run build`
   keeps using the stale `dist`.
-- **`packages/blocking-lint`** — a `tstl` plugin that reports blocking calls made from must-not-sleep contexts,
-  driven by the `@blocking` / `@shouldnotsleep` / `@async` JSDoc tags. It runs in `beforeTransform` and emits
-  `ts.Diagnostic`s, so a violation fails `bun run build`. Loaded from `dist` too — same rebuild caveat as
-  `formatter`, though `index.test.ts` runs against the source and needs no build. See `docs/blocking.md`.
+- **`packages/linter`** — the `tstl` lint plugin. It carries one rule today, `blocking`, which reports blocking
+  calls made from must-not-sleep contexts, driven by the `@blocking` / `@shouldnotsleep` / `@async` JSDoc tags.
+  It runs in `beforeTransform` and emits `ts.Diagnostic`s (`TS90001`, source `linter/blocking`), so a violation
+  fails `bun run build`. Loaded from `dist` too — same rebuild caveat as `formatter`, though `index.test.ts`
+  runs against the source and needs no build. See `docs/blocking.md`.
 
 ### Script bundling
 
@@ -99,7 +100,7 @@ These shape how script code must be written; violating them produces runtime err
 
 - **Signal handlers run synchronously and must not call sleeping procs.** Wrap anything that sleeps (tgui inputs,
   `SS13.await`, etc.) in `SS13.set_timeout(0, () => { ... })` or `invokeAsync`. `bun run build` enforces this via
-  `packages/blocking-lint` and the `@blocking` / `@shouldnotsleep` / `@async` tags — blocking-ness is inferred
+  `packages/linter` and the `@blocking` / `@shouldnotsleep` / `@async` tags — blocking-ness is inferred
   transitively, so only the leaves are tagged. See `docs/blocking.md`.
 - **Luau state globals persist across executions**, so scripts use `declare var x` in a script-local `global.d.ts`
   plus `x ??= ...` / `x = x ?? {}` at module scope to survive re-runs (`src/common/web-loader.ts`,
@@ -158,7 +159,7 @@ What to expect of that checkout, whatever the server:
   blocks and the return value is meaningless) → `SHOULD_NOT_SLEEP(TRUE)` / `SIGNAL_HANDLER` (guaranteed not to
   sleep, leave untagged) → otherwise grep the body and one level down for `sleep` / `stoplag` / `do_after` /
   `input` / `tgui_*` and tag `@blocking`. Tag every overload, and only the leaves —
-  `packages/blocking-lint` infers the rest transitively. Declarations that take a Lua callback get
+  `packages/linter` infers the rest transitively. Declarations that take a Lua callback get
   `@shouldnotsleep` when it runs synchronously (`register_signal`) or `@async` when it is deferred
   (`set_timeout`). An untagged blocking proc silently defeats the check. See `docs/blocking.md`.
 - Codebase-agnostic types → `packages/types/src/dreamluau.d.ts`; codebase-specific → `packages/types/src/ambient/<codebase>/`.

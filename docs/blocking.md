@@ -51,8 +51,11 @@ whatever it captured is still valid, with `SS13.is_valid(mob)`, instead of assum
 
 ## The lint
 
-`packages/blocking-lint` is a tstl plugin. It runs in `beforeTransform`, so it gets the full `ts.Program` and
+`packages/linter` is a tstl plugin. It runs in `beforeTransform`, so it gets the full `ts.Program` and
 reports through the same diagnostics channel as type errors: a violation fails `bun run build`.
+
+Everything below is its `blocking` rule, which is the only one it carries today. Diagnostics from it are
+`TS90001` and carry `linter/blocking` as their source, so a second rule would be `linter/<name>` on `90002`.
 
 Three JSDoc tags drive it. All three go on the declaration of the thing being **called**, never at the call site:
 
@@ -86,7 +89,7 @@ Method calls are resolved through the class hierarchy, so a call to a base metho
 it — `previousClass.onLoss(mutation)` is typed as `ZombieClass.onLoss` but the plugin still sees `Boomer.onLoss`.
 
 Because the plugin lives in a package that is loaded from its build output (`main: "./dist/index.js"`), editing
-`packages/blocking-lint/index.ts` has no effect until you build it (`bun run --filter blocking-lint build`).
+`packages/linter/index.ts` has no effect until you build it (`bun run --filter linter build`).
 
 ### What it does not catch
 

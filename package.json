@@ -7,7 +7,7 @@
   "scripts": {
     "build": "bun run --filter scripts build",
     "build:formatter": "bun run --filter formatter build",
-    "build:linter": "bun run --filter blocking-lint build",
+    "build:linter": "bun run --filter linter build",
     "dev": "bun run --filter scripts dev",
     "test": "bun test",
     "format": "biome format --write .",

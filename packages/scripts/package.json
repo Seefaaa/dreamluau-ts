@@ -9,7 +9,7 @@
     "dev": "tstl --watch"
   },
   "devDependencies": {
-    "blocking-lint": "workspace:*",
+    "linter": "workspace:*",
     "byond-types": "workspace:*",
     "formatter": "workspace:*",
     "typescript-to-lua": "^1.37.1"

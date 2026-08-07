@@ -8,17 +8,6 @@
         "@biomejs/biome": "^2.5.5",
       },
     },
-    "packages/blocking-lint": {
-      "name": "blocking-lint",
-      "version": "0.1.0",
-      "dependencies": {
-        "typescript": "^6",
-        "typescript-to-lua": "^1.37.1",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-      },
-    },
     "packages/formatter": {
       "name": "formatter",
       "version": "0.1.0",
@@ -31,12 +20,23 @@
         "@types/bun": "latest",
       },
     },
+    "packages/linter": {
+      "name": "linter",
+      "version": "0.1.0",
+      "dependencies": {
+        "typescript": "^6",
+        "typescript-to-lua": "^1.37.1",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/scripts": {
       "name": "scripts",
       "devDependencies": {
-        "blocking-lint": "workspace:*",
         "byond-types": "workspace:*",
         "formatter": "workspace:*",
+        "linter": "workspace:*",
         "typescript-to-lua": "^1.37.1",
       },
       "peerDependencies": {
@@ -82,8 +82,6 @@
 
     "@typescript-to-lua/language-extensions": ["@typescript-to-lua/language-extensions@1.19.0", "", {}, "sha512-Os5wOKwviTD4LeqI29N0btYOjokSJ97iCf45EOjIABlb5IwNQy7AE/AqZJobRw3ywHH8+KzJUMkEirWPzh2tUA=="],
 
-    "blocking-lint": ["blocking-lint@workspace:packages/blocking-lint"],
-
     "bun-types": ["bun-types@1.3.14", "", { "dependencies": { "@types/node": "*" } }, "sha512-4N0ig0fEomHt5R0KCFWjovxow98rIoRwKolrYdCcknNwMekCXRnWEUvgu5soYV8QXtVsrUD8B95MBOZGPvr6KQ=="],
 
     "byond-types": ["byond-types@workspace:packages/types"],
@@ -101,6 +99,8 @@
     "hasown": ["hasown@2.0.4", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
 
     "is-core-module": ["is-core-module@2.16.2", "", { "dependencies": { "hasown": "^2.0.3" } }, "sha512-evOr8xfXKxE6qSR0hSXL2r3sd7ALj8+7jQEUvPYcm5sgZFdJ+AYzT6yNmJenvIYQBgIGwfwz08sL8zoL7yq2BA=="],
+
+    "linter": ["linter@workspace:packages/linter"],
 
     "lua-types": ["lua-types@2.14.1", "", {}, "sha512-+EbnTjF+Bbfp5xmpfT0O9AZgC5J6Oq6jRnZei3HLb0pbWuCRHmdnIVRPIgEpUncWvHq21DHB2qTHhA4xGceHHg=="],
 
