@@ -1,6 +1,7 @@
 import * as SS13 from "SS13";
 import { invokeAsync } from "../common/async";
 import { checkTick, makeClock } from "../common/tick";
+import { startAiControllerLoop } from "./ai";
 import { getZombie } from "./globals";
 import { setupZombie } from "./zombie";
 
@@ -11,7 +12,7 @@ runner = SS13.get_runner_ckey();
 isLocal ??= false;
 localClass ??= "Zombie";
 
-isSpawning ??= false;
+isSpawning ??= true;
 allowTankSpawn ??= true;
 allowZombieControllable ??= false;
 destructibleSpawners ??= false;
@@ -34,6 +35,8 @@ if (!isLocal) {
 // #endregion
 
 // #region Entry point
+
+startAiControllerLoop();
 
 const admin = SS13.get_runner_client();
 

@@ -5,6 +5,7 @@ import { invokeAsync } from "../common/async";
 import {
     add_trait,
     explosion,
+    get_atom_on_turf,
     get_dir,
     get_step,
     has_trait,
@@ -16,6 +17,7 @@ import {
 } from "../common/globals";
 import { pick } from "../common/utils";
 import { icon } from "../common/web-loader";
+import { ZombieAi } from "./ai";
 import {
     cultActions,
     itemActions,
@@ -368,7 +370,7 @@ export class BasicZombie extends ZombieClass {
     override readonly slowdownRandom = 0.5;
     override readonly damageResist = -60;
     override readonly noRevive = true;
-    override readonly traits = ["nohardcrit", "nosoftcrit"] as const;
+    override readonly traits: TupleOf<string> = ["nohardcrit", "nosoftcrit"];
 
     override onGain() {
         const head = this.mob.get_bodypart("head");
@@ -415,14 +417,76 @@ export class BasicZombie extends ZombieClass {
 export class AiZombie extends BasicZombie {
     static readonly aiEnabled = true;
 
+    override readonly traits: TupleOf<string> = ["nohardcrit", "nosoftcrit", "grab_resistance"];
+
+    /** The AI driving this mob. Torn down with the class, so changing class stops the zombie dead. */
+    private ai?: ZombieAi;
+
     override onGain() {
         super.onGain();
 
-        if (AiZombie.aiEnabled) {
+        // AI zombies are driven by `ai.ts` rather than by the mob list, and there can be a lot of them
+        list.remove(dm.global_vars.GLOB.mob_living_list, this.mob);
+
+        if (!AiZombie.aiEnabled) return;
+
+        const ai = new ZombieAi(this.mob);
+
+        this.ai = ai;
+
+        invokeAsync(() => {
+            if (!this.isActive()) return;
+            if (SS13.is_valid(this.mob)) this.mob.ghostize(true);
+        });
+
+        // `atom_was_attacked` is relayed by this element, so without it the zombie never retaliates
+        if (!has_trait(this.mob, "relaying_attacker")) {
+            this.mob._AddElement([SS13.type("/datum/element/relay_attackers")]);
+        }
+
+        this.registerSignal(this.mob, "movable_moved", () => {
+            ai.updateOffset();
+        });
+
+        this.registerSignal(this.mob, "atom_was_attacked", (_source, attacker) => {
+            if (this.mob.stat !== 0) return; // not Conscious
+            if (!SS13.istype(attacker, "/atom/movable")) return;
+
+            ai.retaliate(get_atom_on_turf(attacker));
+        });
+
+        this.registerSignal(this.mob, "living_disarm_hit", () => {
+            this.mob.Knockdown(20);
+            this.mob.Paralyze(20);
+        });
+
+        this.registerSignal(this.mob, "mob_statchange", (_source, newStat) => {
+            if (newStat !== 0)
+                ai.makeInactive(); // not Conscious
+            else ai.makeActive();
+        });
+
+        this.registerSignal(this.mob, "mob_login", () => {
             invokeAsync(() => {
-                if (!this.isActive()) return;
-                if (SS13.is_valid(this.mob)) this.mob.ghostize(true);
+                if (!SS13.is_valid(this.mob)) return;
+
+                to_chat(
+                    this.mob,
+                    "<span class='userdanger'>Your body is being controlled by a zombie! Wait until the zombification is cured.</span>"
+                );
+                this.mob.ghostize(true);
             });
+        });
+    }
+
+    override onLoss(deleted: boolean) {
+        super.onLoss(deleted);
+
+        this.ai?.cleanup();
+        this.ai = undefined;
+
+        if (!deleted && list.find(dm.global_vars.GLOB.mob_living_list, this.mob) === 0) {
+            list.add(dm.global_vars.GLOB.mob_living_list, this.mob);
         }
     }
 }
@@ -488,6 +552,11 @@ export class Boomer extends SpecialZombie {
                             currentDirection = get_dir(previousTurf, currentTurf) ?? currentDirection;
                         }
 
+                        if (!currentTurf) {
+                            endLoop = true;
+                            return;
+                        }
+
                         let canPass = false;
 
                         const atmosAdjacentTurfs = currentTurf.atmos_adjacent_turfs;
@@ -528,9 +597,12 @@ export class Boomer extends SpecialZombie {
                         }
 
                         // spawns foam with width of 3 turfs
+                        const left = get_step(currentTurf, turn(currentDirection, angle));
+                        const right = get_step(currentTurf, turn(currentDirection, -angle));
+
                         spawnFoam(currentTurf);
-                        spawnFoam(get_step(currentTurf, turn(currentDirection, angle)));
-                        spawnFoam(get_step(currentTurf, turn(currentDirection, -angle)));
+                        if (left) spawnFoam(left);
+                        if (right) spawnFoam(right);
                     });
                 });
             },
@@ -712,7 +784,10 @@ export class Jockey extends SpecialZombie {
 
                         if (dm.world.time < nextRelay) return 1;
 
-                        victim.Move(get_step(user, direction));
+                        const step = get_step(user, direction);
+                        if (!step) return 1;
+
+                        victim.Move(step);
                         nextRelay = dm.world.time + 10; // 1 second cd
 
                         return 1;
@@ -872,7 +947,7 @@ export class Tank extends SpecialZombie {
 
                 for (const _ of $range(1, 8)) {
                     const nextTurf = get_step(targetTurf, dir);
-                    if (nextTurf.is_blocked_turf(true, target) === 1) break;
+                    if (!nextTurf || nextTurf.is_blocked_turf(true, target) === 1) break;
                     targetTurf = nextTurf;
                 }
 

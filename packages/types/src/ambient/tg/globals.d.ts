@@ -11,11 +11,13 @@ declare interface GlobalVars {
     SSpolling: SS13.SSpolling;
 
     GLOB: {
+        cardinals: Byond.List<number, Byond.Direction.Cardinal>;
         mob_living_list: Byond.List<number, Byond.Mob.Living>;
         /**
          * all ckeys with associated client
          */
         directory: Byond.List<string, Byond.Client>;
+        glide_size_multiplier: number;
     };
 }
 
@@ -55,9 +57,48 @@ declare interface GlobalProcs {
     _add_trait(target: Byond.Datum, trait: string, source: string): void;
     _remove_trait(target: Byond.Datum, trait: string, source: string): void;
 
-    _get_step(ref: Byond.Atom, direction: Byond.Direction): Byond.Turf;
+    /** Direction `0` is the standard shorthand for "the turf `ref` is standing on". */
+    _get_step(ref: Byond.Atom, direction: Byond.Direction | 0): Byond.Turf | undefined;
     _get_dir(from: Byond.Atom, to: Byond.Atom): Byond.Direction;
+    _get_dist(from: Byond.Atom, to: Byond.Atom): number;
     _turn(direction: Byond.Direction, angle: number): Byond.Direction;
+    _animate(target: Byond.Atom, set_vars: Record<string, unknown>, time?: number, loop?: number): void;
+    _rect_turfs(h_radius: number, v_radius: number, center: Byond.Atom): Byond.List<number, Byond.Turf>;
+
+    /**
+     * Returns a list of movable atoms that are hearing sensitive in view_radius and line of sight to source
+     * the majority of the work is passed off to the spatial grid if view_radius > 0
+     * because view() isnt a raycasting algorithm, this does not hold symmetry to it. something in view might not be hearable with this.
+     * if you want that use get_hearers_in_view() - however thats significantly more expensive
+     *
+     * * view_radius - what radius search circle we are using, worse performance as this increases but not as much as it used to
+     * * source - object at the center of our search area. everything in get_turf(source) is guaranteed to be part of the search area
+     */
+    get_hearers_in_LOS(
+        view_radius: number,
+        source: Byond.Atom,
+        contents_type?:
+            | "recursive_contents_area_sensitive"
+            | "recursive_contents_hearing_sensitive"
+            | "recursive_contents_client_mobs"
+            | "recursive_contents_active_storage"
+    ): Byond.List<number, Byond.Atom.Movable> | undefined;
+
+    /**
+     * Returns the atom sitting on the turf.
+     * For example, using this on a disk, which is in a bag, on a mob,
+     * will return the mob because it's on the turf.
+     *
+     * Arguments
+     * * something_in_turf - a movable within the turf, somewhere.
+     * * stop_type - stops looking if stop_type is found in the turf, returning that type (if found).
+     * * return_any - if set to TRUE, will return last movable found even if its not of the passed type
+     */
+    get_atom_on_turf(
+        something_in_turf: Byond.Atom.Movable,
+        stop_type?: Byond.Type,
+        return_any?: Byond.Bool | boolean
+    ): Byond.Atom.Movable;
 
     /**
      * The exact same as get_hearers_in_view, but not limited by visibility. Does no filtering for traits, line of sight, or any other such criteria.

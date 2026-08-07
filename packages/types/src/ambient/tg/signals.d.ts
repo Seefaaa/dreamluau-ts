@@ -33,6 +33,13 @@ declare interface Signals<S extends Byond.Datum> {
         show_message: Byond.Bool
     ) => Signal<[COMPONENT_NO_EXPOSE_REAGENTS]>;
     atom_relaymove: (source: S, user: Byond.Mob.Living, direct: Byond.Direction) => Signal<[COMSIG_BLOCK_RELAYMOVE]>;
+    /** from relay_attackers element: (atom/attacker, attack_flags, direction) */
+    atom_was_attacked: (
+        source: S extends Byond.Atom ? S : never,
+        attacker: Byond.Atom,
+        attack_flags: Bitflags.Attacker,
+        direction: Byond.Direction | undefined
+    ) => Signal;
     atom_entered: (
         source: S,
         arrived: Byond.Atom.Movable,
@@ -82,6 +89,13 @@ declare interface Signals<S extends Byond.Datum> {
         attack_modifiers: Byond.List<string, any> | undefined
     ) => Signal<[COMPONENT_CANCEL_ATTACK_CHAIN]>;
     living_death: (source: S extends Byond.Mob.Living ? S : never, gibbed: Byond.Bool) => Signal;
+    /** Hit by successful disarm attack (mob/living/attacker, zone_targeted, item/weapon) */
+    living_disarm_hit: (
+        source: S extends Byond.Mob.Living ? S : never,
+        attacker: Byond.Mob.Living,
+        zone_targeted: Enums.BodyZoneAll,
+        weapon: Byond.Obj.Item | undefined
+    ) => Signal;
     mob_ability_base_started: (
         source: S,
         actionTarget: Byond.Datum.Action.Cooldown,
@@ -93,6 +107,8 @@ declare interface Signals<S extends Byond.Datum> {
         direct: Byond.Direction.Cardinal
     ) => Signal<[COMSIG_MOB_CLIENT_BLOCK_PRE_NON_LIVING_MOVE]>;
     mob_ctrl_clicked: (source: S, target: Byond.Atom) => Signal;
+    /** from base of /mob/Login(): () */
+    mob_login: (source: S extends Byond.Mob ? S : never) => Signal;
     mob_statchange: (source: S extends Byond.Mob ? S : never, new_stat: number, old_stat: number) => Signal;
     movable_moved: (
         source: S extends Byond.Atom.Movable ? S : never,

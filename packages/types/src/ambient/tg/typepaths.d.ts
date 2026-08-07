@@ -28,6 +28,7 @@ declare interface TypePathRegistry {
     "/datum/effect_system/fluid_spread/foam/short": Byond.Datum.EffectSystem.FluidSpread.Foam.Short;
     "/datum/element": Byond.Datum.Element;
     "/datum/element/footstep": Byond.Datum.Element.Footstep;
+    "/datum/element/relay_attackers": Byond.Datum.Element.RelayAttackers;
     "/datum/element/wall_tearer": Byond.Datum.Element.WallTearer;
     "/datum/fluid_group": Byond.Datum.FluidGroup;
     "/datum/gas_mixture": Byond.Datum.GasMixture;
@@ -70,6 +71,7 @@ declare interface TypePathRegistry {
     "/mob/living": Byond.Mob.Living;
     "/mob/living/carbon": Byond.Mob.Living.Carbon;
     "/mob/living/carbon/human": Byond.Mob.Living.Carbon.Human;
+    "/mob/living/silicon": Byond.Mob.Living.Silicon;
 
     "/obj": Byond.Obj;
     "/obj/effect/overlay": Byond.Obj.Effect.Overlay;

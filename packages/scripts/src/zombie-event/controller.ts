@@ -28,8 +28,10 @@ export const zombieControllers: Byond.Mob.Eye[] = [];
 /**
  * Mapping of zombie controller references to their current target.
  * This is used to track which target each controller has rallied their zombies towards.
+ *
+ * Read by the zombie AI (`ai.ts`), which prefers a rallied target over anything it finds by itself.
  */
-const zombieControllerTargets: Record<string, Byond.Atom> = {};
+export const zombieControllerTargets: Record<string, Byond.Atom> = {};
 
 /**
  * Mapping of z-levels to lists of dead players at that z-level.
@@ -139,9 +141,6 @@ export function makeZombieController(location: Byond.Turf): Byond.Mob.Eye {
                 zombieControllerTargets[controllerRef] = undefined;
             });
         }
-
-        // `zombieControllerTargets` above is what the zombie AI will read once it exists; there is nothing to
-        // notify yet, so the rally is currently only the bookkeeping and the chat message.
 
         nextRally = dm.world.time + 30;
 

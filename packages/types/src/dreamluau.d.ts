@@ -384,6 +384,12 @@ declare namespace Byond {
          * If a movable atom uses the bound vars to change its physical size, or step_x or step_y to change its position, it may cover more than one turf. In that case, those turfs’ contents won’t just contain anything directly in them, but also any atoms overhanging them. I.e., if a turf is in a mob’s locs list, then the mob is in that turf’s contents list. (See locs for more information.)
          */
         contents: Byond.List<number, Byond.Atom.Movable>;
+
+        /**
+         * This determines whether the object blocks movement. A dense object cannot be entered by another dense object; the mover’s Bump() is called instead of the move taking place.
+         */
+        get density(): Byond.Bool;
+        set density(value: Byond.Bool | boolean);
     }
 
     namespace Atom {
@@ -432,20 +438,23 @@ declare namespace Byond {
     class World extends Byond.Datum {
         time: number;
         tick_lag: number;
+
+        /** The width and height of an icon, in pixels. */
+        icon_size: number;
     }
 
     namespace Direction {
-        type South = 1;
-        type North = 2;
+        type North = 1;
+        type South = 2;
         type East = 4;
         type West = 8;
-        type Cardinal = South | North | East | West;
+        type Cardinal = North | South | East | West;
 
-        type Southeast = 5;
-        type Southwest = 9;
-        type Northeast = 6;
-        type Northwest = 10;
-        type Ordinal = Southeast | Southwest | Northeast | Northwest;
+        type Northeast = 5;
+        type Southeast = 6;
+        type Northwest = 9;
+        type Southwest = 10;
+        type Ordinal = Northeast | Southeast | Northwest | Southwest;
     }
 
     type Direction = Direction.Cardinal | Direction.Ordinal;

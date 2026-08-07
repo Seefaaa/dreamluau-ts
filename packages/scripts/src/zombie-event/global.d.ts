@@ -22,4 +22,10 @@ declare var destructibleSpawners: boolean;
 
 declare var allZombies: Record<string, import("./zombie").Zombie>;
 
+/** The id of the newest AI dispatch loop. Older loops compare against it and retire themselves. */
+declare var zombieAiLoop: string | undefined;
+/** Handle on the current run's AI list, for admin inspection. */
+declare var currentZombieAiList: import("./ai").ZombieAi[];
+declare var zombieAiCount: number;
+
 // #endregion

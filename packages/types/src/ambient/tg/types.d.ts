@@ -1028,6 +1028,13 @@ declare namespace Byond {
             class WallTearer extends Byond.Datum.Element {}
 
             class Footstep extends Byond.Datum.Element {}
+
+            /**
+             * This element registers to a shitload of signals which can signify "someone attacked me".
+             * If anyone does it sends a single "someone attacked me" signal containing details about who done it.
+             * This prevents other components and elements from having to register to the same list of a million signals, should be more maintainable in one place.
+             */
+            class RelayAttackers extends Byond.Datum.Element {}
         }
 
         class StatusEffect extends Byond.Datum {}
@@ -1074,8 +1081,29 @@ declare namespace Byond {
 
         mind: Byond.Datum.Mind | undefined;
 
+        /** The calculated mob speed slowdown based on the modifiers list */
+        cached_multiplicative_slowdown: number;
+
         /** bitflags defining which status effects can be inflicted (replaces canknockdown, canstun, etc) */
         status_flags: Bitflags.Status;
+
+        /**
+         * Standard mob ClickOn()
+         *
+         * After that, mostly just check your state, check whether you're holding an item,
+         * check whether you're adjacent to the target, then pass off the click to whoever is receiving it.
+         *
+         * The most common are:
+         * * [mob/proc/UnarmedAttack] (atom,adjacent) - used here only when adjacent, with no item in hand; in the case of humans, checks gloves
+         * * [atom/proc/attackby] (item,user) - used only when adjacent
+         * * [obj/item/proc/afterattack] (atom,user,adjacent,params) - used both ranged and adjacent
+         * * [mob/proc/RangedAttack] (atom,modifiers) - used only ranged, only used for tk and laser eyes but could be changed
+         *
+         * `params` is the raw click parameter string, as handed to `params2list()`; pass `""` for a plain click.
+         *
+         * @blocking Hands off to the attack chain, which reaches `do_after` in many branches.
+         */
+        ClickOn(this: Byond.Mob, target: Byond.Atom, params: string): void;
 
         /**
          * Whether a mob is alive or dead. TODO: Move this to living - Nodrak (2019, still here)
@@ -1264,7 +1292,47 @@ declare namespace Byond {
              */
             mobility_flags: Bitflags.Mobility;
 
+            /** If combat mode is on or not */
+            get combat_mode(): Byond.Bool;
+            set combat_mode(value: Byond.Bool | boolean);
+
             getarmor(this: Byond.Mob.Living, defType: string | undefined, type: string): number;
+
+            /**
+             * Proc to append behavior to the condition of being floored. Called when the condition ends.
+             *
+             * Standing back up is delegated to `get_up`, which is `set waitfor = FALSE`, so this returns
+             * without waiting for the mob to actually stand.
+             */
+            on_floored_end(this: Byond.Mob.Living): void;
+
+            /**
+             * Proc to hook behavior to the change of value in the resting variable.
+             *
+             * Standing back up is delegated to `get_up`, which is `set waitfor = FALSE`, so this does not block.
+             *
+             * Returns the previous resting state, or nothing when the mob cannot rest at all.
+             */
+            set_resting(
+                this: Byond.Mob.Living,
+                new_resting: Byond.Bool | boolean,
+                silent?: Byond.Bool | boolean,
+                instant?: Byond.Bool | boolean
+            ): Byond.Bool | undefined;
+
+            /**
+             * proc extender of [/mob/living/verb/resist] meant to make the process queable if the server is overloaded when the verb is called
+             *
+             * @blocking Reaches `container_resist_act` and `resist_restraints`, both of which sleep.
+             */
+            execute_resist(this: Byond.Mob.Living): void;
+
+            /** Can't go below remaining duration */
+            Paralyze(
+                this: Byond.Mob.Living,
+                amount: number,
+                ignore_canstun?: Byond.Bool | boolean
+            ): Byond.Datum.StatusEffect.Incapacitating | undefined;
 
             /**
              * Called when the mob dies. Can also be called manually to kill a mob.
@@ -1324,6 +1392,8 @@ declare namespace Byond {
                 dna: Byond.Datum.Dna;
             }
 
+            class Silicon extends Byond.Mob.Living {}
+
             namespace Carbon {
                 class Human extends Byond.Mob.Living.Carbon {
                     physiology: Byond.Datum.Physiology;
@@ -1359,10 +1429,29 @@ declare namespace Byond {
 
         resistance_flags: Bitflags.Resistance;
 
+        flags_1: Bitflags.Flags;
+
         /**
          * Where atoms should drop if taken from this atom
          */
         drop_location(this: Byond.Atom): Byond.Atom | undefined;
+
+        /**
+         * Is this atom reachable by the passed movable?
+         *
+         * Args:
+         * * user: The movable trying to reach us.
+         * * reacher_range: How far the reacher can reach.
+         * * depth: How deep nested inside of an atom contents stack an object can be.
+         * * direct_access: Do not override. Used for recursion.
+         */
+        IsReachableBy(
+            this: Byond.Atom,
+            user: Byond.Atom.Movable,
+            reacher_range?: number,
+            depth?: number,
+            direct_access?: Byond.List<number, Byond.Atom>
+        ): Byond.Bool;
 
         add_overlay(
             this: Byond.Atom,
@@ -2457,6 +2546,84 @@ declare namespace Byond {
 
 declare namespace Bitflags {
     type SeeInvisibleObserver = 60;
+
+    /** Passed to the `atom_was_attacked` signal by the `/datum/element/relay_attackers` element. */
+    namespace Attacker {
+        /** The damage type of the weapon projectile is non-lethal stamina */
+        type StaminaAttack = 1;
+        /** the attacker is shoving the source */
+        type Shoving = 2;
+        /** The attack is a damaging-type attack */
+        type DamagingAttack = 4;
+        /** The attack was ranged */
+        type Ranged = 8;
+    }
+
+    type Attacker = Bitflag<
+        [
+            Bitflags.Attacker.StaminaAttack,
+            Bitflags.Attacker.Shoving,
+            Bitflags.Attacker.DamagingAttack,
+            Bitflags.Attacker.Ranged,
+        ]
+    >;
+
+    /** `/atom/var/flags_1`. */
+    namespace Flags {
+        /** Is this object currently processing in the atmos object list? */
+        type AtmosIsProcessing = 1;
+        /** item has priority to check when entering or leaving */
+        type OnBorder = 2;
+        /** Whether or not this atom shows screentips when hovered over */
+        type NoScreentips = 4;
+        /** Prevent clicking things below it on the same turf eg. doors/ fulltile windows */
+        type PreventClickUnder = 8;
+        /** specifies that this atom is a hologram that isn't real */
+        type Hologram = 16;
+        /** Whether /atom/Initialize() has already run for the object */
+        type Initialized = 32;
+        /** was this spawned by an admin? used for stat tracking stuff. */
+        type AdminSpawned = 64;
+        /** should not get harmed if this gets caught by an explosion? */
+        type PreventContentsExplosion = 128;
+        /** Should this object be paintable with very dark colors? */
+        type AllowDarkPaints = 256;
+        /** Should this object be unpaintable? */
+        type Unpaintable = 512;
+        /** Is this atom immune to being dusted by the supermatter? */
+        type SupermatterIgnores = 1024;
+        /** If a turf can be made dirty at roundstart. This is also used in areas. */
+        type CanBeDirty = 2048;
+        /** Should we use the initial icon for display? Mostly used by overlay only objects */
+        type HtmlUseInitalIcon = 4096;
+        /** Can players recolor this in-game via vendors (and maybe more if support is added)? */
+        type IsPlayerColorable = 8192;
+        /** Whether or not this atom has contextual screentips when hovered OVER */
+        type HasContextualScreentips = 16384;
+        /** Whether or not this atom is storing contents for a disassociated storage object */
+        type HasDisassociatedStorage = 32768;
+    }
+
+    type Flags = Bitflag<
+        [
+            Bitflags.Flags.AtmosIsProcessing,
+            Bitflags.Flags.OnBorder,
+            Bitflags.Flags.NoScreentips,
+            Bitflags.Flags.PreventClickUnder,
+            Bitflags.Flags.Hologram,
+            Bitflags.Flags.Initialized,
+            Bitflags.Flags.AdminSpawned,
+            Bitflags.Flags.PreventContentsExplosion,
+            Bitflags.Flags.AllowDarkPaints,
+            Bitflags.Flags.Unpaintable,
+            Bitflags.Flags.SupermatterIgnores,
+            Bitflags.Flags.CanBeDirty,
+            Bitflags.Flags.HtmlUseInitalIcon,
+            Bitflags.Flags.IsPlayerColorable,
+            Bitflags.Flags.HasContextualScreentips,
+            Bitflags.Flags.HasDisassociatedStorage,
+        ]
+    >;
 
     /**
      * These defines are used specifically with the atom/pass_flags bitmask

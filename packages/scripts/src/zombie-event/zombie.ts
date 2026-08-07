@@ -366,6 +366,8 @@ function openZombieSettings(user: Byond.Mob, zombie: Zombie) {
         )
     );
 
+    content += `<hr/><b>ACTIVE ZOMBIE AI: ${currentZombieAiList.length} / ${zombieAiCount}</b><br/>`;
+
     const timeAvgKeys: number[] = [];
     let prevLine: number | undefined;
 
