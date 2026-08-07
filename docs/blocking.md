@@ -31,13 +31,13 @@ eye: the handler itself looks harmless, and the sleeping call is three or four f
 
 ## The escape hatch
 
-Defer the work instead of doing it inline. `invokeAsync` (`src/common/async.ts`) wraps
-`SS13.set_timeout(0, ...)`, which schedules the callback on the next tick, in a fresh context that *is* allowed to
-sleep. It is the direct equivalent of DM's `INVOKE_ASYNC`.
+Defer the work instead of doing it inline. `SS13.set_timeout(0, ...)` schedules the callback on the next tick,
+in a fresh context that *is* allowed to sleep. It is the direct equivalent of DM's `INVOKE_ASYNC`, and it is
+what the lint tells you to reach for.
 
 ```ts
 SS13.register_signal(mob, "species_gain", (source) => {
-    invokeAsync(() => {
+    SS13.set_timeout(0, () => {
         const [answer] = SS13.await(SS13.global_proc, "tgui_alert", source, "Join?", "Zombie", ["Yes", "No"]);
         // ...
     });
@@ -45,9 +45,9 @@ SS13.register_signal(mob, "species_gain", (source) => {
 });
 ```
 
-Use `set_timeout` directly when the delay itself matters (`SS13.set_timeout(60, ...)` for "in six seconds");
-`invokeAsync` when you only want to get out of the handler. Either way the callback runs *later*, so check that
-whatever it captured is still valid — `SS13.is_valid(mob)` — instead of assuming it is.
+A delay of `0` means "next tick", not "immediately". Pass a real one — `SS13.set_timeout(60, ...)` for six
+seconds — when the wait is the point rather than the escape. Either way the callback runs *later*, so check that
+whatever it captured is still valid, with `SS13.is_valid(mob)`, instead of assuming it is.
 
 ## The lint
 
@@ -75,7 +75,7 @@ The report names the call you actually wrote, then shows the chain that makes it
 see from the call site:
 
 ```text
-src/zombie-event/mutation.ts(141,17): error TS90001: `setClass` can sleep, but this runs where sleeping is not allowed (passed to `register_signal`).
+src/zombie-event/zombie.ts(141,17): error TS90001: `setClass` can sleep, but this runs where sleeping is not allowed (passed to `register_signal`).
   setClass → grantAbility → icon → sleep
   Defer it with `SS13.set_timeout(0, () => { ... })`.
 ```
@@ -91,7 +91,7 @@ Because the plugin lives in a package that is loaded from its build output (`mai
 ### What it does not catch
 
 - **Callbacks stored and called later.** A function put in an array or a field and invoked through that field is
-  not connected to its call sites. `MutationData.cleanup` is that case in this codebase.
+  not connected to its call sites. `ZombieClass.cleanup` is that case in this codebase.
 - **Anything behind `loadstring`** or another opaque indirection.
 - **Static method overrides.** Only instance methods are matched across a class hierarchy.
 - **Over-approximation, in the other direction.** An inline callback argument is assumed to run synchronously

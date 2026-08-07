@@ -27,6 +27,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# machine-specific Claude Code context
+CLAUDE.local.md
+.claude/settings.local.json
+
 # IntelliJ based IDEs
 .idea
 

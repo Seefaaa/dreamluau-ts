@@ -386,7 +386,9 @@ declare namespace Byond {
         contents: Byond.List<number, Byond.Atom.Movable>;
 
         /**
-         * This determines whether the object blocks movement. A dense object cannot be entered by another dense object; the mover’s Bump() is called instead of the move taking place.
+         * This turns the object's density on or off (1 or 0). Two dense objects may not occupy the same space in the standard movement system.
+         *
+         * Default value: 0 (1 for mobs)
          */
         get density(): Byond.Bool;
         set density(value: Byond.Bool | boolean);
@@ -439,8 +441,14 @@ declare namespace Byond {
         time: number;
         tick_lag: number;
 
-        /** The width and height of an icon, in pixels. */
-        icon_size: number;
+        /**
+         * This is the tile size that will be used as a default for icons in the world. It can be set to a single number that represents both the width and height, or you can use a format like "[width]x[height]" (such as "16x48") to specify width and height separately.
+         *
+         * Default value: 32
+         *
+         * The string form is why this is not just `number` — do not use it in arithmetic without narrowing.
+         */
+        icon_size: number | string;
     }
 
     namespace Direction {

@@ -25,6 +25,12 @@ bun run build
 
 The compiled Luau output is placed in `packages/scripts/dist/`.
 
+### Pointing at your codebase
+
+Because the shipped types were written against one revision of one codebase (see the note above), anything you add or correct has to be checked against the DM source your server actually runs. Keep a local clone of that codebase and read it directly.
+
+See [`docs/type-declarations.md`](docs/type-declarations.md) for how to turn what you find there into declarations.
+
 ## Usage Example
 
 ```typescript
@@ -39,9 +45,9 @@ const human = SS13.new("/mob/living/carbon/human");
 
 The `packages/types` package (`byond-types`) provides ambient type declarations for:
 
-- **Dreamluau runtime** &mdash; `sleep()`, `loadstring()`, `_exec`, `dm` (world, global_vars, new, type checking)
-- **BYOND Types** &mdash; `Byond.Datum`, `Byond.Atom`, `Byond.Mob`, `Byond.Icon`, `Byond.Sound`, `Byond.List`, etc.
-- **/tg/station codebase** &mdash; `Byond.Mob.Living.Carbon.Human`, `Byond.Datum.Mind`, etc.
+- **Dreamluau runtime**: `sleep()`, `loadstring()`, `_exec`, `dm` (world, global_vars, new, type checking)
+- **BYOND Types**: `Byond.Datum`, `Byond.Atom`, `Byond.Mob`, `Byond.Icon`, `Byond.Sound`, `Byond.List`, etc.
+- **/tg/station codebase**: `Byond.Mob.Living.Carbon.Human`, `Byond.Datum.Mind`, etc.
 
 Those types are automatically included in your TypeScript project when you add the following to your `tsconfig.json`:
 
@@ -55,9 +61,5 @@ Those types are automatically included in your TypeScript project when you add t
 
 ## Planned Features
 
-- **Standalone `byond-types` package** &mdash; `packages/types` will be published as a standalone npm package, so anyone can install it directly in their own TypeScriptToLua projects without needing the full monorepo.
-- **Project generator** &mdash; A scaffolding package (similar to `create-app` or `create-dreamluau`) that bootstraps a complete, ready-to-use Dreamluau + TypeScriptToLua project with types, build config, and all.
-
-## Contact
-
-- Discord: `seefaaa`
+- **Standalone `byond-types` package**: `packages/types` will be published as a standalone npm package, so anyone can install it directly in their own TypeScriptToLua projects without needing the full monorepo.
+- **Project generator**: A scaffolding package (similar to `create-app` or `create-dreamluau`) that bootstraps a complete, ready-to-use Dreamluau + TypeScriptToLua project with types, build config, and all.

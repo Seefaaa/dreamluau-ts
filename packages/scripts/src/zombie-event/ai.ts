@@ -541,8 +541,13 @@ export class ZombieAi {
         }
 
         const slowdown = this.mob.cached_multiplicative_slowdown;
-        const glidingSpeed =
-            (dm.world.icon_size / (slowdown / dm.world.tick_lag)) * dm.global_vars.GLOB.glide_size_multiplier;
+
+        // `world.icon_size` is a number on any normal server, but BYOND also lets it be a `"[w]x[h]"` string —
+        // tg's own `ICON_SIZE_ALL` define carries the warning that "more exotic coders will be sad if you use
+        // this in math". Fall back to the 32 tg assumes rather than propagating a NaN into every glide.
+        const iconSize = tonumber(dm.world.icon_size) ?? 32;
+
+        const glidingSpeed = (iconSize / (slowdown / dm.world.tick_lag)) * dm.global_vars.GLOB.glide_size_multiplier;
 
         if (!SS13.is_valid(this.target)) {
             this.clearTarget();
