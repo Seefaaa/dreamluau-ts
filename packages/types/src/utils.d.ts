@@ -80,3 +80,9 @@ declare type FieldsOf<T> = {
  * ```
  */
 declare type UniqueFieldsOf<T, U> = Exclude<FieldsOf<T>, FieldsOf<U>>;
+
+/**
+ * Makes a tuple type of at least one element of type T.
+ * This is useful for enforcing that an array has at least one element.
+ */
+declare type TupleOf<T> = readonly [T, ...T[]];

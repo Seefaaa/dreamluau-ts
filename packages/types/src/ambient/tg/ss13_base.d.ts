@@ -49,6 +49,9 @@ declare module "SS13_base" {
 
     export function check_tick(high_priority?: Byond.Bool): void;
 
+    /**
+     * @blocking
+     */
     export function await<F extends MethodsOf<GlobalProcs>, A extends Parameters<GlobalProcs[F]>>(
         thing_to_call: typeof import("SS13").global_proc,
         proc_to_call: F,

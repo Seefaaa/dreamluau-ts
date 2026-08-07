@@ -13,6 +13,7 @@
     "noImplicitSelf": true,
     "luaBundle": "main.lua",
     "luaBundleEntry": "./src/index.ts",
+    "luaLibImport": "require-minimal",
     "luaPlugins": [{ "name": "formatter" }]
   },
   "include": ["src"]

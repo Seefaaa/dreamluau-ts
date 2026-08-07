@@ -1,6 +1,7 @@
 import * as SS13 from "SS13";
+import { invokeAsync } from "../common/async";
 import { checkTick, makeClock } from "../common/tick";
-import { getZombieMutation } from "./globals";
+import { getMutation } from "./globals";
 import { setupZombieMutation } from "./mutation";
 
 // #region Initial settings
@@ -46,9 +47,9 @@ if (isLocal) {
     SS13.unregister_signal(SSdcs, "!mob_created");
 
     SS13.register_signal(SSdcs, "!mob_created", (_source, mob) => {
-        SS13.set_timeout(0, () => {
+        invokeAsync(() => {
             if (SS13.is_valid(mob) && SS13.istype(mob, "/mob/living/carbon/human")) {
-                if (!getZombieMutation(mob)) {
+                if (!getMutation(mob)) {
                     setupZombieMutation(mob);
                 }
             }
@@ -60,7 +61,7 @@ if (isLocal) {
     for (const [, human] of list.filter(dm.global_vars.GLOB.mob_living_list, "/mob/living/carbon/human")) {
         checkTick(clock);
 
-        SS13.set_timeout(0, () => {
+        invokeAsync(() => {
             if (SS13.is_valid(human)) setupZombieMutation(human);
         });
     }

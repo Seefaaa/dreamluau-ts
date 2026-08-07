@@ -2415,6 +2415,26 @@ declare namespace Byond {
          * list of turfs adjacent to us that air can flow onto
          */
         atmos_adjacent_turfs: Byond.List<Byond.Turf, Byond.True> | undefined;
+
+        /**
+         * Check whether the specified turf is blocked by something dense inside it with respect to a specific atom.
+         *
+         * Arguments:
+         * * exclude_mobs - If TRUE, ignores dense mobs on the turf.
+         * * source_atom - If this is not null, will check whether any contents on the turf can block this atom specifically. Also ignores itself on the turf.
+         * * ignore_atoms - Check will ignore any atoms in this list. Useful to prevent an atom from blocking itself on the turf.
+         * * type_list - are we checking for types of atoms to ignore and not physical atoms
+         */
+        is_blocked_turf(
+            this: Byond.Turf,
+            exclude_mobs?: Byond.Bool | boolean,
+            source_atom?: Byond.Atom,
+            ignore_atoms?:
+                | Byond.List<number, Byond.Atom | Byond.Type<Byond.Atom>>
+                | Byond.Atom[]
+                | Byond.Type<Byond.Atom>[],
+            type_list?: Byond.Bool | boolean
+        ): Byond.Bool;
     }
 }
 

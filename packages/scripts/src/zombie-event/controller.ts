@@ -2,9 +2,20 @@
 
 import * as SS13 from "SS13";
 import { grantAbility } from "../common/ability";
-import { add_trait, copytext, key_name_admin, message_admins, pick_list, ref, to_chat, trim } from "../common/globals";
+import { invokeAsync } from "../common/async";
+import {
+    add_trait,
+    copytext,
+    key_name_admin,
+    message_admins,
+    pick_list,
+    ref,
+    remove_trait,
+    to_chat,
+    trim,
+} from "../common/globals";
 import { icon } from "../common/web-loader";
-import { getZombieMutation } from "./globals";
+import { getMutation } from "./globals";
 import { getPlane, isZombieSpecies } from "./utils";
 
 // #region Zombie Controller
@@ -63,24 +74,27 @@ export function controllerSay(controller: Byond.Mob, message: string, big?: bool
 export function makeZombieController(
     location: Byond.Turf,
     // lua cant resolve circular imports as good as ts can, so we have to pass this in as a parameter instead of importing it
-    setClass: typeof import("./mutation").setClass
+    setClass: typeof import("./mutation").ZombieClass.setClass
 ): Byond.Mob.Eye {
     // #region Controller Creation
 
     const controller = SS13.new("/mob/eye", location);
     controller.real_name = `Zombie Controller (${math.random(101, 999)})`;
     controller.name = controller.real_name;
-    controller.invisibility = 35;
-    controller.see_invisible = 35;
-    controller.layer = 5;
-    controller.plane = getPlane(-3, location);
+    controller.invisibility = 60; // INVISIBILITY_OBSERVER (60)
+    controller.see_invisible = 25; // SEE_INVISIBLE_LIVING (25)
+    controller.layer = 5; // FLY_LAYER (5)
+    controller.plane = getPlane(-3, location); // ABOVE_GAME_PLANE (-3)
     controller.set_faction(["zombie"]);
-    controller.set_sight(60);
-    controller.mouse_opacity = 1;
+    controller.set_sight(60); // SEE_MOBS (4) | SEE_OBJS (8) | SEE_TURFS (16) | SEE_SELF (32)
+    controller.mouse_opacity = 1; // MOUSE_OPACITY_ICON (1)
     controller.color = "#33cc33";
     controller.icon = icon("https://raw.githubusercontent.com/tgstation/tgstation/master/icons/mob/eyemob.dmi");
     controller.icon_state = "marker";
     controller.mind_initialize();
+
+    add_trait(controller, "mute", "zs_controller");
+    remove_trait(controller, "block_shuttle_movement", "innate"); // set in /Initialize
 
     const mind = assert(controller.mind);
 
@@ -98,8 +112,6 @@ export function makeZombieController(
     list.add(antag.objectives, objective);
 
     mind.add_antag_datum(antag);
-
-    add_trait(controller, "mute", "zs_controller");
 
     table.insert(zombieControllers, controller);
 
@@ -138,14 +150,14 @@ export function makeZombieController(
         for (const [, zombie] of list.filter(potentialTargets, "/mob/living/carbon/human")) {
             if (!isZombieSpecies(zombie)) continue;
 
-            const mutationData = getZombieMutation(zombie);
+            const mutation = getMutation(zombie);
 
-            if (!mutationData || mutationData.class !== "Zombie (AI)") continue;
+            if (!mutation || mutation.class !== "Zombie (AI)") continue;
 
-            if (mutationData.zombieAi !== undefined) {
-                mutationData.zombieAi.nextTargetSearch = 0;
-                mutationData.zombieAi.lastTarget = dm.world.time;
-                mutationData.zombieAi.makeActive();
+            if (mutation.zombieAi !== undefined) {
+                mutation.zombieAi.nextTargetSearch = 0;
+                mutation.zombieAi.lastTarget = dm.world.time;
+                mutation.zombieAi.makeActive();
             }
         }
 
@@ -229,7 +241,7 @@ export function makeZombieController(
         onActivate: (_context, _action, _target) => {
             if (isUiOpen) return 1;
 
-            SS13.set_timeout(0, () => {
+            invokeAsync(() => {
                 isUiOpen = true;
 
                 const [message] = SS13.await(
@@ -286,14 +298,14 @@ export function makeZombieController(
                 return 1;
             }
 
-            const mutation = getZombieMutation(target);
+            const mutation = getMutation(target);
 
             if (!mutation || mutation.class !== "Zombie (AI)" || !mutation.spawned) {
                 controller.balloon_alert(controller, "invalid target");
                 return 1;
             }
 
-            SS13.set_timeout(0, () => {
+            invokeAsync(() => {
                 const [text] = SS13.await(
                     SS13.global_proc,
                     "tgui_input_text",
