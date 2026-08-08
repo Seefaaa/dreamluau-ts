@@ -1,17 +1,20 @@
 {
-  "name": "scripts",
-  "module": "src/index.ts",
-  "type": "module",
+  "name": "@scripts/zombie",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
   "scripts": {
+    "prebuild": "bun run --filter '@scripts/common' build",
     "build": "tstl",
-    "build:release": "NODE_ENV=production tstl",
     "dev": "tstl --watch"
   },
+  "dependencies": {
+    "@scripts/common": "workspace:*"
+  },
   "devDependencies": {
-    "linter": "workspace:*",
     "byond-types": "workspace:*",
     "formatter": "workspace:*",
+    "linter": "workspace:*",
     "typescript-to-lua": "^1.37.1"
   },
   "peerDependencies": {

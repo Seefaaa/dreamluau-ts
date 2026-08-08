@@ -1,20 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": false,
-    "rewriteRelativeImportExtensions": true,
     "rootDir": "./src",
     "outDir": "./dist",
+    "declaration": true,
     "types": ["byond-types/tg"]
   },
   "tstl": {
+    "buildMode": "library",
     "luaTarget": "Luau",
     "noImplicitSelf": true,
-    "luaBundle": "main.lua",
-    "luaBundleEntry": "./src/index.ts",
     "luaLibImport": "require-minimal",
-    "luaPlugins": [{ "name": "formatter" }, { "name": "linter" }]
+    "luaPlugins": [{ "name": "formatter" }]
   },
   "include": ["src"]
 }

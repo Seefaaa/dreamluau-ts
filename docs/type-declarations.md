@@ -361,9 +361,9 @@ function body, so `SS13.type()` on it widens to a union of unrelated registry ty
 bun run build
 ```
 
-**`bun run build` is the type check.** It runs tstl over the whole `packages/scripts/src` tree, including files
-`index.ts` does not import, so a broken declaration surfaces even if nothing currently uses it. `bun run check`
-is Biome — formatting and lint, no type checking at all.
+**`bun run build` is the type check.** It runs tstl over every script package, and over all of each one's files
+rather than only what its entry imports, so a broken declaration surfaces even if nothing currently uses it.
+`bun run check` is Biome — formatting and lint, no type checking at all.
 
 Two kinds of failure are worth expecting rather than working around:
 

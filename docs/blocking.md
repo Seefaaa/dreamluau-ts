@@ -78,7 +78,7 @@ The report names the call you actually wrote, then shows the chain that makes it
 see from the call site:
 
 ```text
-src/zombie-event/zombie.ts(141,17): error TS90001: `setClass` can sleep, but this runs where sleeping is not allowed (passed to `register_signal`).
+packages/scripts/zombie/src/zombie.ts(141,17): error TS90001: `setClass` can sleep, but this runs where sleeping is not allowed (passed to `register_signal`).
   setClass → grantAbility → icon → sleep
   Defer it with `SS13.set_timeout(0, () => { ... })`.
 ```

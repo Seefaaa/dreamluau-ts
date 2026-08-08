@@ -1,6 +1,6 @@
 import * as SS13 from "SS13";
-import { invokeAsync } from "../common/async";
-import { checkTick, makeClock } from "../common/tick";
+import { invokeAsync } from "@scripts/common/async";
+import { checkTick, makeClock } from "@scripts/common/tick";
 import { startAiControllerLoop } from "./ai";
 import { getZombie } from "./globals";
 import { setupZombie } from "./zombie";

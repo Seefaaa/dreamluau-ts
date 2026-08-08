@@ -1,7 +1,6 @@
 import * as SS13 from "SS13";
-import * as HandlerGroup from "handler_group";
-import { type AbilityBuilder, grantAbility } from "../common/ability";
-import { invokeAsync } from "../common/async";
+import { type AbilityBuilder, grantAbility } from "@scripts/common/ability";
+import { invokeAsync } from "@scripts/common/async";
 import {
     add_trait,
     explosion,
@@ -14,9 +13,10 @@ import {
     remove_trait,
     to_chat,
     turn,
-} from "../common/globals";
-import { pick } from "../common/utils";
-import { icon } from "../common/web-loader";
+} from "@scripts/common/globals";
+import { pick } from "@scripts/common/utils";
+import { icon } from "@scripts/common/web-loader";
+import * as HandlerGroup from "handler_group";
 import { ZombieAi } from "./ai";
 import {
     cultActions,

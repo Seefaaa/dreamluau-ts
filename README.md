@@ -17,13 +17,33 @@ Write [Dreamluau](https://github.com/tgstation/dreamluau/) scripts for [Space St
 bun install
 ```
 
+### Project layout
+
+Every script is its own package under `packages/scripts/`, so they are built and shipped independently and are
+never mixed into one output. Shared helpers live in `packages/scripts/common` and are compiled into each
+script's bundle:
+
+```text
+packages/scripts/
+├── common/          shared helpers — no output of its own
+├── template/        starting point for a new script
+└── <script>/
+    └── src/         the script, entry point is src/index.ts
+```
+
 ### Building
 
 ```bash
-bun run build
+bun run build          # every script
+bun run build:<script>   # just one
 ```
 
-The compiled Luau output is placed in `packages/scripts/dist/`.
+Each script compiles to a single self-contained Luau file at `packages/scripts/<script>/dist/main.lua`.
+
+### Adding a script
+
+Copy `packages/scripts/template`, rename the package in its `package.json`, then `bun install`. `bun run build`
+picks it up with no further wiring, the workspace and build filters are globs.
 
 ### Pointing at your codebase
 

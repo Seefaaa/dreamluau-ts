@@ -1,0 +1,23 @@
+{
+  "name": "@scripts/common",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tstl"
+  },
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "tstl": "./dist/*",
+      "default": "./dist/*"
+    }
+  },
+  "devDependencies": {
+    "byond-types": "workspace:*",
+    "formatter": "workspace:*",
+    "typescript-to-lua": "^1.37.1"
+  },
+  "peerDependencies": {
+    "typescript": "^6"
+  }
+}

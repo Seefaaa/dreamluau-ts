@@ -1,8 +1,8 @@
 /** @noSelfInFile */
 
 import * as SS13 from "SS13";
+import { isSpecies, ref } from "@scripts/common/globals";
 import * as HandlerGroup from "handler_group";
-import { isSpecies, ref } from "../common/globals";
 
 export function getPlane(newPlane: number, zReference: Byond.Atom): number {
     const SSmapping = dm.global_vars.SSmapping;

@@ -1,6 +1,5 @@
 import * as SS13 from "SS13";
-import * as HandlerGroup from "handler_group";
-import { invokeAsync } from "../common/async";
+import { invokeAsync } from "@scripts/common/async";
 import {
     animate,
     get_atom_on_turf,
@@ -11,9 +10,10 @@ import {
     has_trait,
     rect_turfs,
     ref,
-} from "../common/globals";
-import { tickLag } from "../common/tick";
-import { isCardinal, pick } from "../common/utils";
+} from "@scripts/common/globals";
+import { tickLag } from "@scripts/common/tick";
+import { isCardinal, pick } from "@scripts/common/utils";
+import * as HandlerGroup from "handler_group";
 import { cardinals } from "./constants";
 import { zombieControllerTargets } from "./controller";
 import { isZombieSpecies } from "./utils";

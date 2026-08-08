@@ -1,6 +1,6 @@
 /** @noSelfInFile */
 
-import { ref } from "../common/globals";
+import { ref } from "@scripts/common/globals";
 
 allZombies = allZombies ?? {};
 

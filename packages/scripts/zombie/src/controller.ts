@@ -1,8 +1,8 @@
 /** @noSelfInFile */
 
 import * as SS13 from "SS13";
-import { grantAbility } from "../common/ability";
-import { invokeAsync } from "../common/async";
+import { grantAbility } from "@scripts/common/ability";
+import { invokeAsync } from "@scripts/common/async";
 import {
     add_trait,
     copytext,
@@ -13,8 +13,8 @@ import {
     remove_trait,
     to_chat,
     trim,
-} from "../common/globals";
-import { icon } from "../common/web-loader";
+} from "@scripts/common/globals";
+import { icon } from "@scripts/common/web-loader";
 import { getZombie } from "./globals";
 import { getPlane } from "./utils";
 

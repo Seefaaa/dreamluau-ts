@@ -1,0 +1,23 @@
+{
+  "name": "@scripts/template",
+  "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "prebuild": "bun run --filter '@scripts/common' build",
+    "build": "tstl",
+    "dev": "tstl --watch"
+  },
+  "dependencies": {
+    "@scripts/common": "workspace:*"
+  },
+  "devDependencies": {
+    "byond-types": "workspace:*",
+    "formatter": "workspace:*",
+    "linter": "workspace:*",
+    "typescript-to-lua": "^1.37.1"
+  },
+  "peerDependencies": {
+    "typescript": "^6"
+  }
+}

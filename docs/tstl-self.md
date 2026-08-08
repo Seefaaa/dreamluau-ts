@@ -7,7 +7,7 @@ TypeScript, and **tstl picks between them from the types alone**.
 Getting it wrong is not a compile error. The emitted Lua is valid, it just shifts every argument by one, so a
 proc reads the first real argument as `src` and the last one goes missing. That surfaces in game, as nonsense.
 
-This project sets `noImplicitSelf: true` (`packages/scripts/tsconfig.json`). That is worth reading precisely,
+Every script package sets `noImplicitSelf: true` in its `tsconfig.json`. That is worth reading precisely,
 because it is weaker than it sounds: it changes the default **only where `this` is otherwise unspecified**. It
 does not mean nothing takes a self.
 
@@ -117,7 +117,7 @@ or `a.b()`. The two have to match, and nothing else will tell you they do:
 
 ```bash
 bun run build
-grep -n "yourFunction" packages/scripts/dist/main.lua
+grep -n "yourFunction" packages/scripts/zombie/dist/main.lua
 ```
 
 `dist/main.lua` only contains what is reachable from `index.ts`. To look at a file that nothing imports yet,

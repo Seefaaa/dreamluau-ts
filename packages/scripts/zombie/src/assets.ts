@@ -1,4 +1,4 @@
-import { icon, sounds } from "../common/web-loader";
+import { icon, sounds } from "@scripts/common/web-loader";
 
 // #region Zombie sounds
 

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "types": ["byond-types/tg"]
+  },
+  "tstl": {
+    "luaTarget": "Luau",
+    "noImplicitSelf": true,
+    "luaBundle": "main.lua",
+    "luaBundleEntry": "./src/index.ts",
+    "luaLibImport": "require-minimal",
+    "luaPlugins": [{ "name": "formatter" }, { "name": "linter" }]
+  }
+}
+
+// Note about `rootDir`:
+//
+// Use `.` rather than `./src`, so bundle module keys keep a `src.` prefix (`src/ai.ts` → `src.ai`).
+//
+// Keys are paths relative to `rootDir`, and the bundle's loader checks its own table before falling through
+// to the engine's `require`. Unprefixed keys therefore let a source file shadow a real Dreamluau module: a
+// `src/state.ts` becomes `["state"]` and captures every `require("state")` in the bundle, silently, with the
+// build still green. The prefix makes that collision impossible.

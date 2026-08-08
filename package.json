@@ -2,13 +2,14 @@
   "name": "dreamluau-ts",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "packages/scripts/*"
   ],
   "scripts": {
-    "build": "bun run --filter scripts build",
+    "build": "bun run --filter '@scripts/*' build",
     "build:formatter": "bun run --filter formatter build",
     "build:linter": "bun run --filter linter build",
-    "dev": "bun run --filter scripts dev",
+    "build:zombie": "bun run --filter '@scripts/zombie' build",
     "test": "bun test",
     "format": "biome format --write .",
     "lint": "biome lint .",

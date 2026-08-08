@@ -1,8 +1,7 @@
 /** @noSelfInFile */
 
 import * as SS13 from "SS13";
-import * as HandlerGroup from "handler_group";
-import { invokeAsync } from "../common/async";
+import { invokeAsync } from "@scripts/common/async";
 import {
     add_trait,
     do_sparks,
@@ -12,9 +11,10 @@ import {
     pick_list,
     ref,
     remove_trait,
-} from "../common/globals";
-import { getReadablePerfStat, sleepingAt, timeAvg, totalCallCount, totalTimeTaken } from "../common/perf";
-import { isAdmin } from "../common/utils";
+} from "@scripts/common/globals";
+import { getReadablePerfStat, sleepingAt, timeAvg, totalCallCount, totalTimeTaken } from "@scripts/common/perf";
+import { isAdmin } from "@scripts/common/utils";
+import * as HandlerGroup from "handler_group";
 import { BasicZombie, NonZombie, type ZombieClass, zombieClasses } from "./classes";
 import { controllerSay } from "./controller";
 import { createHref, isZombieSpecies } from "./utils";
